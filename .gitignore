@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Android Studio / IntelliJ
+*.iml
+.idea/
+captures/
+.cxx/
+
+# Lokale SDK-/maskinspesifikke filer
+local.properties
+
+# Signering / hemmelegheiter – skal ALDRI inn i repo
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+
+# Native byggjeartefaktar (whisper.cpp, M4)
+app/.cxx/
+
+# OS
+.DS_Store
+Thumbs.db

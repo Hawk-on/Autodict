@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Basetema brukt før Compose tek over. Compose styrer fargane via AutodictTheme. -->
+    <style name="Theme.Autodict" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
