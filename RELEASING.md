@@ -50,12 +50,15 @@ base64 autodict-release.keystore       # macOS (utan -w0)
 
 ## Lage ein release
 
-1. **Bump versjon** i `app/build.gradle.kts`:
-   - `versionName` = den nye taggen utan `v` (t.d. `0.2.0`),
-   - `versionCode` = **høgare** heiltal enn førre release (elles vil sideload-oppdateringa
-     bli avvist).
-2. Commit på utviklingsbranchen og merge til `main`.
-3. Tagg og push frå `main`:
+Taggen er einaste sanningskjelde for versjon – du redigerer **ikkje** `build.gradle.kts`.
+CI utleier automatisk frå `vMAJOR.MINOR.PATCH`:
+
+- `versionName` = taggen utan `v` (t.d. `v0.2.0` → `0.2.0`),
+- `versionCode` = `major*10000 + minor*100 + patch` (t.d. `0.2.0` → `200`). Monotont aukande,
+  så sideload-oppdateringar går alltid igjennom. (Krev `minor` og `patch` < 100.)
+
+1. Sørg for at endringane er på `main`.
+2. Tagg og push frå `main`:
 
    ```bash
    git checkout main && git pull
@@ -63,8 +66,10 @@ base64 autodict-release.keystore       # macOS (utan -w0)
    git push origin v0.2.0
    ```
 
-4. `Release`-workflowen byggjer, signerer, attesterer og publiserer. Sjekk
+3. `Release`-workflowen utleier versjon, byggjer, signerer, attesterer og publiserer. Sjekk
    `Actions`-fana → grønt → `Releases` har APK + `SHA256SUMS`.
+
+> Taggen *må* vere `vMAJOR.MINOR.PATCH` – workflowen feiler tidleg på andre former.
 
 ---
 

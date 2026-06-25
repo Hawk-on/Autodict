@@ -13,8 +13,11 @@ android {
         applicationId = "com.autodict"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+
+        // Versjon kjem frå release-taggen (vX.Y.Z) via CI – sjå RELEASING.md.
+        // Lokale/debug-byggjer brukar fallback under.
+        versionName = System.getenv("RELEASE_VERSION_NAME") ?: "0.1.0"
+        versionCode = System.getenv("RELEASE_VERSION_CODE")?.toInt() ?: 1
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Berre arm64 er aktuelt for whisper.cpp på reelle telefonar (M4).

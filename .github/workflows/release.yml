@@ -40,6 +40,26 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Utled versjon frå tag
+        id: ver
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if ! printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Taggen '$tag' må vere på forma vMAJOR.MINOR.PATCH (t.d. v0.2.0)."
+            exit 1
+          fi
+          name="${tag#v}"
+          IFS=. read -r major minor patch <<< "$name"
+          # versionCode må vere monotont aukande; krev MINOR/PATCH < 100.
+          if [ "$minor" -ge 100 ] || [ "$patch" -ge 100 ]; then
+            echo "::error::minor/patch må vere < 100 for versionCode-utrekninga ($name)."
+            exit 1
+          fi
+          code=$(( major * 10000 + minor * 100 + patch ))
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Release $name (versionCode $code)"
+
       - name: Dekod release-keystore
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -52,6 +72,8 @@ jobs:
 
       - name: Byggje signert release-APK
         env:
+          RELEASE_VERSION_NAME: ${{ steps.ver.outputs.name }}
+          RELEASE_VERSION_CODE: ${{ steps.ver.outputs.code }}
           RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/release.keystore
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
