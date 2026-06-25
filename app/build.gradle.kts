@@ -13,12 +13,28 @@ android {
         applicationId = "com.autodict"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+
+        // Versjon kjem frå release-taggen (vX.Y.Z) via CI – sjå RELEASING.md.
+        // Lokale/debug-byggjer brukar fallback under.
+        versionName = System.getenv("RELEASE_VERSION_NAME") ?: "0.1.0"
+        versionCode = System.getenv("RELEASE_VERSION_CODE")?.toInt() ?: 1
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Berre arm64 er aktuelt for whisper.cpp på reelle telefonar (M4).
         // x86 kan leggjast til for emulator ved behov.
+    }
+
+    signingConfigs {
+        // Release-keystore blir berre levert av CI via env-variablar (sjå RELEASING.md).
+        // Aldri commit keystore eller passord (CLAUDE.md-prinsipp 6).
+        create("release") {
+            System.getenv("RELEASE_KEYSTORE_FILE")?.let { keystorePath ->
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -28,6 +44,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Signerast berre når keystore er levert via env. Utan nøkkel blir release-APK-en
+            // usignert — greitt for lokale testbyggjer, men ikkje for distribusjon.
+            signingConfigs.getByName("release").storeFile?.let {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
