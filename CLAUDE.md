@@ -26,6 +26,10 @@ Detaljert plan: `/root/.claude/plans/eg-vil-lage-ein-witty-sonnet.md` (om tilgje
    brukaren har stadfesta dei foreslåtte handlingspunkta.
 6. **Ingen hemmelegheiter i repo.** API-nøklar (Claude) lagrast trygt på eininga
    (EncryptedSharedPreferences/DataStore), aldri commitast.
+7. **Attribusjon og lisensar.** `THIRD_PARTY_NOTICES.md` er ei levande sjekkliste – oppdater
+   den når ein modell/bibliotek faktisk blir lagt til. Unngå copyleft (særleg `espeak-ng`
+   GPL i offline-TTS); vel permissive alternativ. Krediter modell-kjeldene (NB-Whisper,
+   Borealis frå Nasjonalbiblioteket).
 
 ## Prosjektstruktur
 
