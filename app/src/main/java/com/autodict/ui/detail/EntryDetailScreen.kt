@@ -1,38 +1,54 @@
 package com.autodict.ui.detail
 
+import android.media.MediaPlayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.autodict.ui.theme.AutodictTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 
-/**
- * Viser/redigerer ei enkelt oppføring (tekst, lyd, handlingspunkt). Per M0 ein plassholdar –
- * innhald og lagring kjem i M2.
- */
+/** Vis ei oppføring med tekst og avspeling av lyden. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EntryDetailScreen(
-    entryId: String,
     onBack: () -> Unit,
+    viewModel: EntryDetailViewModel = viewModel(),
 ) {
+    val ui by viewModel.ui.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    var player by remember { mutableStateOf<MediaPlayer?>(null) }
+    DisposableEffect(Unit) {
+        onDispose { player?.release(); player = null }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Oppføring") },
+                title = { Text(ui.entry?.title?.ifBlank { "Oppføring" } ?: "Oppføring") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tilbake")
@@ -45,19 +61,38 @@ fun EntryDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Oppføring: $entryId")
-        }
-    }
-}
+            val entry = ui.entry
+            when {
+                ui.loading -> Text("Lastar …")
+                entry == null -> Text("Fann ikkje oppføringa.")
+                else -> {
+                    Text(entry.created, style = MaterialTheme.typography.bodySmall)
 
-@Preview(showBackground = true)
-@Composable
-private fun EntryDetailScreenPreview() {
-    AutodictTheme {
-        EntryDetailScreen(entryId = "døme", onBack = {})
+                    ui.audioUri?.let { uri ->
+                        Button(onClick = {
+                            player?.release()
+                            player = MediaPlayer().apply {
+                                setOnCompletionListener { mp -> mp.release(); player = null }
+                                setDataSource(context, uri)
+                                prepare()
+                                start()
+                            }
+                        }) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Text("  Spel av")
+                        }
+                    }
+
+                    Text(
+                        text = entry.body.ifBlank { "(ingen tekst)" },
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            }
+        }
     }
 }

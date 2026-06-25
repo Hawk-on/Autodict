@@ -7,6 +7,10 @@ import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import java.io.File
+
+/** Ei markdown-fil funne i mappa: namn, URI og innhald. */
+data class MarkdownFile(val name: String, val uri: Uri, val content: String)
 
 /**
  * All lagring mot den brukarvalde mappa (Storage Access Framework).
@@ -102,5 +106,67 @@ class SafRepository(
         runCatching {
             resolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
         }.getOrNull()
+    }
+
+    /** Kopierer ei lokal fil (t.d. WAV frå cache) inn i mappa, og returnerer URI-en. */
+    suspend fun copyFileInto(
+        folders: List<String>,
+        fileName: String,
+        mimeType: String,
+        source: File,
+    ): Uri? = withContext(Dispatchers.IO) {
+        var dir = root() ?: return@withContext null
+        for (folder in folders) {
+            dir = findOrCreateDir(dir, folder) ?: return@withContext null
+        }
+        dir.findFile(fileName)?.delete()
+        val file = dir.createFile(mimeType, fileName) ?: return@withContext null
+        runCatching {
+            resolver.openOutputStream(file.uri, "wt")?.use { out ->
+                source.inputStream().use { it.copyTo(out) }
+            } ?: error("openOutputStream gav null")
+        }.fold(
+            onSuccess = { file.uri },
+            onFailure = { file.delete(); null },
+        )
+    }
+
+    /** Finn URI-en til ei fil i `<rot>/<folders...>/<fileName>`, eller null. */
+    suspend fun findFileUri(folders: List<String>, fileName: String): Uri? = withContext(Dispatchers.IO) {
+        var dir = root() ?: return@withContext null
+        for (folder in folders) {
+            dir = dir.findFile(folder)?.takeIf { it.isDirectory } ?: return@withContext null
+        }
+        dir.findFile(fileName)?.uri
+    }
+
+    /**
+     * Les alle `.md`-filer i mappa (rekursivt). Hoppar over "conflict"-filer frå sync-klientar.
+     * Treigt for mange filer – M3 innfører ein indeks/cache oppå dette.
+     */
+    suspend fun listMarkdownFiles(): List<MarkdownFile> = withContext(Dispatchers.IO) {
+        val root = root() ?: return@withContext emptyList()
+        val found = mutableListOf<DocumentFile>()
+        collectMarkdown(root, found)
+        found.mapNotNull { file ->
+            val name = file.name ?: return@mapNotNull null
+            val content = runCatching {
+                resolver.openInputStream(file.uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+            }.getOrNull() ?: return@mapNotNull null
+            MarkdownFile(name, file.uri, content)
+        }
+    }
+
+    private fun collectMarkdown(dir: DocumentFile, out: MutableList<DocumentFile>) {
+        for (child in dir.listFiles()) {
+            if (child.isDirectory) {
+                collectMarkdown(child, out)
+            } else {
+                val name = child.name ?: continue
+                if (name.endsWith(".md", ignoreCase = true) && !name.contains("conflict", ignoreCase = true)) {
+                    out.add(child)
+                }
+            }
+        }
     }
 }
