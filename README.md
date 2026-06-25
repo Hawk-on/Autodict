@@ -96,8 +96,8 @@ lyd og transkripsjon kan ikkje testast i emulator utan vidare).
 ## Status / milepælar
 
 - [x] **M0** – Prosjektskjelett + dokumentasjon
-- [ ] **M1** – SAF-lagring
-- [ ] **M2** – MVP: opptak + manuell tekst + lagring
+- [x] **M1** – SAF-lagring
+- [x] **M2** – MVP: opptak + manuell tekst + lagring
 - [ ] **M3** – Lokal indeks + Opus-arkiv
 - [ ] **M4** – Offline transkripsjon (whisper.cpp + NB-Whisper)
 - [ ] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender

@@ -21,6 +21,17 @@ object StoragePaths {
     }
 
     /**
+     * Utleier datomappene frå ein id/slug som startar med `yyyy-MM-dd` (slik [entrySlug] lagar).
+     * Fell tilbake til tom liste (= rotmappa) om formatet ikkje stemmer.
+     */
+    fun dateFoldersFromId(id: String): List<String> {
+        val valid = id.length >= 7 && id[4] == '-' &&
+            id.take(4).all(Char::isDigit) && id.substring(5, 7).all(Char::isDigit)
+        if (!valid) return emptyList()
+        return listOf(id.take(4), id.take(7))
+    }
+
+    /**
      * Slug/basisnamn for ei oppføring: tidsstempel + valfri tittel-slug.
      * T.d. `2026-06-02T14-03-12-eit-kort-notat`, eller berre tidsstempelet om tittelen er tom.
      */
