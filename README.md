@@ -103,6 +103,7 @@ lyd og transkripsjon kan ikkje testast i emulator utan vidare).
 - [ ] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender
 - [ ] **M6** – Google Tasks + del-til-Keep
 - [ ] **M7** – Claude API (opt-in)
-- [ ] **M8** – Lokal LLM-hjerne (Borealis + llama.cpp): offline smart assistent
-- [ ] **M9** – Opplesing / TTS (Piper offline; personleg stemme eksperimentelt)
+- [ ] **M8** – Lokal LLM-hjerne (NB-Llama/Borealis + llama.cpp): assistent + sammendrag dag/veke/månad
+- [ ] **M9** – Opplesing / TTS (Android system-TTS for norsk)
 - [ ] **M10** – Hurtigopptak-widget + polering
+- [ ] **M11** – Forteljing & bok-eksport (rettleiande spørsmål, forteljings-modus, PDF/EPUB)
