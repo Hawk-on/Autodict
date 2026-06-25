@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -26,7 +27,10 @@ import com.autodict.ui.theme.AutodictTheme
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecordScreen(onOpenList: () -> Unit) {
+fun RecordScreen(
+    onOpenList: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -34,6 +38,9 @@ fun RecordScreen(onOpenList: () -> Unit) {
                 actions = {
                     IconButton(onClick = onOpenList) {
                         Icon(Icons.Default.List, contentDescription = "Vis dagbok")
+                    }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Innstillingar")
                     }
                 },
             )
@@ -61,6 +68,6 @@ fun RecordScreen(onOpenList: () -> Unit) {
 @Composable
 private fun RecordScreenPreview() {
     AutodictTheme {
-        RecordScreen(onOpenList = {})
+        RecordScreen(onOpenList = {}, onOpenSettings = {})
     }
 }

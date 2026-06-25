@@ -8,12 +8,14 @@ import androidx.navigation.compose.rememberNavController
 import com.autodict.ui.detail.EntryDetailScreen
 import com.autodict.ui.list.EntryListScreen
 import com.autodict.ui.record.RecordScreen
+import com.autodict.ui.settings.SettingsScreen
 
 /** Navigasjonsrutene i appen. Held som enkle string-konstantar inntil vidare. */
 object Routes {
     const val RECORD = "record"
     const val LIST = "list"
     const val DETAIL = "detail/{entryId}"
+    const val SETTINGS = "settings"
 
     fun detail(entryId: String) = "detail/$entryId"
 }
@@ -24,6 +26,7 @@ fun AutodictNavHost(navController: NavHostController = rememberNavController()) 
         composable(Routes.RECORD) {
             RecordScreen(
                 onOpenList = { navController.navigate(Routes.LIST) },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
             )
         }
         composable(Routes.LIST) {
@@ -38,6 +41,9 @@ fun AutodictNavHost(navController: NavHostController = rememberNavController()) 
                 entryId = entryId,
                 onBack = { navController.popBackStack() },
             )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }
