@@ -13,6 +13,11 @@ on:
 permissions:
   contents: read
 
+# Avbryt eldre, uferdige køyringar på same branch når ein ny push kjem (sparar CI-minutt).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
