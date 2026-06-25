@@ -21,6 +21,19 @@ android {
         // x86 kan leggjast til for emulator ved behov.
     }
 
+    signingConfigs {
+        // Release-keystore blir berre levert av CI via env-variablar (sjå RELEASING.md).
+        // Aldri commit keystore eller passord (CLAUDE.md-prinsipp 6).
+        create("release") {
+            System.getenv("RELEASE_KEYSTORE_FILE")?.let { keystorePath ->
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -28,6 +41,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Signerast berre når keystore er levert via env. Utan nøkkel blir release-APK-en
+            // usignert — greitt for lokale testbyggjer, men ikkje for distribusjon.
+            signingConfigs.getByName("release").storeFile?.let {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
