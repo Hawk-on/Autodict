@@ -21,8 +21,9 @@ synkronisere via t.d. Dropbox, Google Drive eller Syncthing.
 - ✅ **Google Tasks:** opprett gjeremål automatisk; **del-til-Keep** for notat (eitt trykk).
 - 🤖 **Assistent-uttrekk:** finn avtalar/gjeremål i transkriptet – tre nivå: regelbasert
   offline, lokal LLM (Borealis offline), eller Claude API (opt-in) for smartast tolking.
-- 🧩 **Lokal LLM-hjerne (offline):** ein liten norsk modell (Borealis via llama.cpp) som driv
-  fleire funksjonar – uttrekk, oppreinsking av transkript, auto-tittel, tags, oppsummering.
+- 🧩 **Lokal LLM-hjerne (offline):** ein liten norsk modell (NB-Llama-3.2 eller Borealis-open
+  via llama.cpp) som driv fleire funksjonar – uttrekk, oppreinsking, auto-tittel, tags,
+  oppsummering.
 - 🔊 **Opplesing (TTS):** les opp oppføringar/oppsummeringar offline; eksperimentelt med di
   eiga stemme (on-device stemmekloning).
 
@@ -50,7 +51,7 @@ audio: 2026-06-02T14-03-12-eit-kort-notat.wav
 duration_seconds: 42
 language: no
 transcribed: true
-model: nb-whisper-base-q5_0
+model: nb-whisper-small-q5_0
 tags: []
 ---
 

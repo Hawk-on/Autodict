@@ -19,11 +19,13 @@ parentes). Mål: oppfylle attribusjonskrav og halde appen fri for utilsikta copy
 
 | Modell | Bruk | Lisens | Merknad / attribusjon |
 |---|---|---|---|
-| **NB-Whisper** (NbAiLab / Nasjonalbiblioteket) | Transkripsjon (M4) | Apache 2.0 | Krediter Nasjonalbiblioteket. Attribusjon etter åndsverklova gjeld for nedlasting i Noreg. |
-| **Borealis – open** (Nasjonalbiblioteket) | Lokal LLM (M8) | Gemma-lisens | Føretrekt variant. Følg Gemma "prohibited use"-policy. Krediter NB. |
+| **NB-Whisper** "main" (NbAiLab / Nasjonalbiblioteket) | Transkripsjon (M4) | Apache 2.0 | Standard `small q5_0`. Krediter Nasjonalbiblioteket. Attribusjon etter åndsverklova gjeld for nedlasting i Noreg. |
+| **NB-Llama-3.2-3B/1B-Instruct** (NbAiLab) | Lokal LLM (M8), førsteval | Llama 3.2 Community License | Reinaste lisens. Krediter NB + følg Llama-vilkåra (namnekrav, 700M MAU-klausul). |
+| **Borealis – open** (Nasjonalbiblioteket) | Lokal LLM (M8), alternativ | Gemma-lisens | Sterkast norsk, men preview/ikkje safety-aligna. Følg Gemma "prohibited use"-policy. Krediter NB. |
 | Borealis – full (Nasjonalbiblioteket) | (alternativ) | NB-lisens (Apache 2.0 + restriksjonar) | Ikkje gjenskape treningsdata; ikkje tenester for tilgang til lisensiert presse. |
-| **NeuTTS Air** (Neuphonic) | Personleg stemme (M9, eksp.) | Apache 2.0 | Krediter Neuphonic. ⚠️ Støttar ikkje norsk enno. Sjekk fonemisering (espeak?). |
-| Piper-stemme (norsk) | Offline opplesing (M9) | **Pr. stemme!** (CC-BY / CC0 / CC-BY-SA) | ⚠️ Verifiser lisensen til den konkrete stemma. CC-BY-SA = share-alike. CC-BY = krev kreditering. |
+| **Android system-TTS** (Google, på eininga) | Opplesing (M9), **standard** | OS-API (ingen bundling) | **Lisens-reint** – beste norsk offline. Ingen attribusjon/GPL. |
+| Piper-stemme (norsk) | Opplesing (M9), valfritt | GPL (espeak-ng) + **pr. stemme** (CC-BY/CC0/CC-BY-SA) | ⚠️ GPL via espeak-ng – isoler i nedlastbar modul. Svak norsk kvalitet. Verifiser stemmelisens. |
+| NeuTTS Air (Neuphonic) | Personleg stemme (utsett) | Apache 2.0 (+ espeak GPL) | ⚠️ Støttar ikkje norsk i 2026. Utsett til norsk finst. |
 
 ## ⚠️ Copyleft å passe på (gjeld berre M9 / offline-TTS)
 

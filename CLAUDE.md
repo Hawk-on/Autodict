@@ -54,9 +54,15 @@ app/src/main/cpp/    # whisper.cpp + (seinare) llama.cpp + JNI
 - `Transcriber` – no-op/manuell i MVP, `WhisperTranscriber` i M4.
 - `ActionExtractor` – `RuleBasedExtractor` (offline) i M5, `LlmActionExtractor` (Borealis) i M8,
   `ClaudeActionExtractor` i M7. Tre nivå: reglar → lokal LLM → Claude (opt-in).
-- `LlmEngine` – delt llama.cpp/GGUF-motor (Borealis) for uttrekk, oppreinsking, tittel,
-  tags, oppsummering. Éin singleton, sekvensiell kø (M8).
-- `SpeechSynthesizer` – opplesing: system-TTS / Piper (offline) / personleg stemme (M9).
+- `LlmEngine` – delt llama.cpp/GGUF-motor for uttrekk, oppreinsking, tittel, tags,
+  oppsummering. Éin singleton, sekvensiell kø (M8). Modell: NB-Llama-3.2-3B/1B-Instruct
+  (Llama-lisens) eller Borealis-open 1B/4B (Gemma-lisens).
+- `SpeechSynthesizer` – opplesing: **system-TTS (standard, best norsk, lisens-rein)** /
+  Piper (valfri, GPL-isolert). Personleg stemme utsett (ingen norsk-støtte i 2026) (M9).
+
+**Norsk-modellval (research juni 2026):** ASR = NB-Whisper "main", standard `small q5_0`
+(vendepunkt; base=rask, medium=beste); eksplisitt `nn`/`nb`; batch, ikkje live. Dialektar
+er største kvalitetsrisiko. TTS = Android system-TTS for norsk. Detaljar i planen.
 
 ## Kommandoar
 
