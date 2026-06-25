@@ -19,8 +19,12 @@ synkronisere via t.d. Dropbox, Google Drive eller Syncthing.
   sky-synka mappe etter eige ønske.
 - 🗓️ **Kalender:** opprett hendingar frå det du seier (opnar kalender-appen ferdig utfylt).
 - ✅ **Google Tasks:** opprett gjeremål automatisk; **del-til-Keep** for notat (eitt trykk).
-- 🤖 **Assistent-uttrekk:** finn avtalar/gjeremål i transkriptet – regelbasert offline, med
-  valfri Claude API (opt-in) for smartare tolking.
+- 🤖 **Assistent-uttrekk:** finn avtalar/gjeremål i transkriptet – tre nivå: regelbasert
+  offline, lokal LLM (Borealis offline), eller Claude API (opt-in) for smartast tolking.
+- 🧩 **Lokal LLM-hjerne (offline):** ein liten norsk modell (Borealis via llama.cpp) som driv
+  fleire funksjonar – uttrekk, oppreinsking av transkript, auto-tittel, tags, oppsummering.
+- 🔊 **Opplesing (TTS):** les opp oppføringar/oppsummeringar offline; eksperimentelt med di
+  eiga stemme (on-device stemmekloning).
 
 ## Datalagring og format
 
@@ -95,7 +99,9 @@ lyd og transkripsjon kan ikkje testast i emulator utan vidare).
 - [ ] **M2** – MVP: opptak + manuell tekst + lagring
 - [ ] **M3** – Lokal indeks + Opus-arkiv
 - [ ] **M4** – Offline transkripsjon (whisper.cpp + NB-Whisper)
-- [ ] **M5** – Handlingsuttrekk (offline) + kalender
+- [ ] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender
 - [ ] **M6** – Google Tasks + del-til-Keep
 - [ ] **M7** – Claude API (opt-in)
-- [ ] **M8** – Hurtigopptak-widget + polering
+- [ ] **M8** – Lokal LLM-hjerne (Borealis + llama.cpp): offline smart assistent
+- [ ] **M9** – Opplesing / TTS (Piper offline; personleg stemme eksperimentelt)
+- [ ] **M10** – Hurtigopptak-widget + polering

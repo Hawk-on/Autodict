@@ -37,16 +37,22 @@ app/src/main/java/com/autodict/
   data/transcribe/   # Transcriber-interface, WhisperEngine (JNI), ModelDownloader
   data/markdown/     # FrontmatterSerializer, EntryFileMapper
   data/index/        # lokal cache/indeks
-  data/actions/      # ActionExtractor (RuleBased + Claude), NorwegianDateTimeParser
+  data/actions/      # ActionExtractor (RuleBased + LLM + Claude), NorwegianDateTimeParser
+  data/llm/          # LlmEngine (llama.cpp/GGUF JNI), delt motor (M8)
+  data/tts/          # SpeechSynthesizer (system/Piper/personleg stemme) (M9)
   data/integration/  # CalendarIntentLauncher, GoogleTasksClient, ShareToKeep
   domain/            # model/, repository/, usecase/
   ui/                # theme, navigation, record, list, detail, settings, actions
-app/src/main/cpp/    # whisper.cpp + JNI (kjem i M4)
+app/src/main/cpp/    # whisper.cpp + (seinare) llama.cpp + JNI
 ```
 
 **Sentrale interface** (legg implementasjonar bak desse):
 - `Transcriber` – no-op/manuell i MVP, `WhisperTranscriber` i M4.
-- `ActionExtractor` – `RuleBasedExtractor` (offline) i M5, `ClaudeActionExtractor` i M7.
+- `ActionExtractor` – `RuleBasedExtractor` (offline) i M5, `LlmActionExtractor` (Borealis) i M8,
+  `ClaudeActionExtractor` i M7. Tre nivå: reglar → lokal LLM → Claude (opt-in).
+- `LlmEngine` – delt llama.cpp/GGUF-motor (Borealis) for uttrekk, oppreinsking, tittel,
+  tags, oppsummering. Éin singleton, sekvensiell kø (M8).
+- `SpeechSynthesizer` – opplesing: system-TTS / Piper (offline) / personleg stemme (M9).
 
 ## Kommandoar
 
