@@ -1,5 +1,6 @@
 package com.autodict.ui.settings
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -25,9 +26,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+private const val SPONSORS_URL = "https://github.com/sponsors/Hawk-on"
 
 /**
  * Innstillingar (M1): vel lagringsmappe (SAF) og test at skriving/lesing fungerer.
@@ -39,6 +44,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree(),
@@ -103,6 +109,24 @@ fun SettingsScreen(
             ui.message?.let { message ->
                 HorizontalDivider()
                 Text(message, style = MaterialTheme.typography.bodySmall)
+            }
+
+            HorizontalDivider()
+            Text("Om", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Autodict er gratis og fri programvare (AGPL-3.0).",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(
+                onClick = {
+                    // Ekstern lenkje; feiler pent utan nett/nettlesar (offline-først).
+                    runCatching {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, SPONSORS_URL.toUri()))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Støtt utviklinga 💜")
             }
         }
     }
