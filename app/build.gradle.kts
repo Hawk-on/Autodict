@@ -1,18 +1,20 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    // Kotlin er innebygd i AGP 9 – kotlin.android-pluginen skal ikkje lenger brukast.
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
 
 android {
     namespace = "com.autodict"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.autodict"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 37
 
         // Versjon kjem frå release-taggen (vX.Y.Z) via CI – sjå RELEASING.md.
         // Lokale/debug-byggjer brukar fallback under.
@@ -57,12 +59,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
+    }
+}
+
+kotlin {
+    compilerOptions {
+        // Kotlin 2.x: kotlinOptions er fjerna – bruk compilerOptions-DSL-en.
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 
