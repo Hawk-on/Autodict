@@ -83,7 +83,11 @@ jobs:
       - name: Verifiser at APK-en er signert
         run: |
           apk=$(find app/build/outputs/apk/release -name "*.apk" | head -n1)
-          "$ANDROID_HOME"/build-tools/*/apksigner verify --verbose "$apk"
+          # Vel éin (nyaste) apksigner – runneren har fleire build-tools-versjonar,
+          # så ein glob ville sendt fleire stiar inn som argument.
+          apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n1)
+          echo "Brukar: $apksigner"
+          "$apksigner" verify --verbose "$apk"
 
       - name: Gi nytt namn + lag checksum
         id: artefakt

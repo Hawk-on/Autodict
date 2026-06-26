@@ -34,14 +34,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
-
-      - name: Unit tests
-        run: ./gradlew test --stacktrace
-
-      - name: Lint
-        run: ./gradlew lint --stacktrace
+      # Éin Gradle-invokasjon: konfigurerer éin gong og deler Kotlin-/Compose-kompileringa
+      # på tvers av assemble/test/lint i staden for tre separate køyringar. Variant-
+      # spesifikke taskar (Debug) hoppar over release-test/-lint som CI ikkje treng.
+      - name: Byggje + test + lint
+        run: ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
