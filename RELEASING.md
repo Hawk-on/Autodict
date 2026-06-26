@@ -50,26 +50,44 @@ base64 autodict-release.keystore       # macOS (utan -w0)
 
 ## Lage ein release
 
-Taggen er einaste sanningskjelde for versjon – du redigerer **ikkje** `build.gradle.kts`.
-CI utleier automatisk frå `vMAJOR.MINOR.PATCH`:
+Versjonen er einaste sanningskjelde – du redigerer **ikkje** `build.gradle.kts`. Workflowen
+utleier automatisk frå `vMAJOR.MINOR.PATCH`:
 
-- `versionName` = taggen utan `v` (t.d. `v0.2.0` → `0.2.0`),
+- `versionName` = versjon utan `v` (t.d. `v0.2.0` → `0.2.0`),
 - `versionCode` = `major*10000 + minor*100 + patch` (t.d. `0.2.0` → `200`). Monotont aukande,
   så sideload-oppdateringar går alltid igjennom. (Krev `minor` og `patch` < 100.)
 
+> ⚠️ **Ikkje lag release-en manuelt i web-UI-et.** Repoet har *immutable releases*, så eit
+> manuelt publisert release blir låst med ein gong – då får workflowen ikkje lagt på APK-en.
+> Lat workflowen lage tag + release + artefakt sjølv.
+
+### Måte 1 – frå Actions-fana (tilrådd, fungerer på mobil)
+
 1. Sørg for at endringane er på `main`.
-2. Tagg og push frå `main`:
+2. GitHub → **Actions** → **Release** → **Run workflow**.
+3. Skriv versjon (t.d. `v0.1.2`), branch `main` → **Run workflow**.
 
-   ```bash
-   git checkout main && git pull
-   git tag -a v0.2.0 -m "Autodict 0.2.0"
-   git push origin v0.2.0
-   ```
+Workflowen byggjer, signerer, lagar tag + release og legg APK + `SHA256SUMS` på sleppet.
 
-3. `Release`-workflowen utleier versjon, byggjer, signerer, attesterer og publiserer. Sjekk
-   `Actions`-fana → grønt → `Releases` har APK + `SHA256SUMS`.
+### Måte 2 – tag-push (frå ei maskin med push-tilgang)
 
-> Taggen *må* vere `vMAJOR.MINOR.PATCH` – workflowen feiler tidleg på andre former.
+```bash
+git checkout main && git pull
+git tag -a v0.1.2 -m "Autodict 0.1.2"
+git push origin v0.1.2
+```
+
+Sjekk `Actions` → grønt → `Releases` har APK + `SHA256SUMS`.
+
+> Versjonen *må* vere `vMAJOR.MINOR.PATCH` – workflowen feiler tidleg på andre former.
+> Kvar versjon kan berre brukast éin gong (immutable) – bump alltid til eit nytt nummer.
+
+### Proveniens-attestasjon (SLSA)
+
+Build-proveniens via `actions/attest-build-provenance` krev **offentleg repo** (eller
+organisasjon med GitHub Advanced Security). På eit privat brukar-repo blir steget hoppa
+pent over, og resten av sleppet går som normalt. Gjer du repoet offentleg, slår
+attestasjonen seg på automatisk.
 
 ---
 

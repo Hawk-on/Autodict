@@ -1,10 +1,15 @@
 name: Release
 
-# Byggjer ein SIGNERT release-APK, lagar checksum, attesterer proveniens (SLSA via
-# sigstore/Rekor) og publiserer alt som ein GitHub Release.
+# Byggjer ein SIGNERT release-APK, lagar checksum, (attesterer proveniens om mogleg) og
+# publiserer alt som ein GitHub Release.
 #
-# Trigg: push av ein tag som byrjar med "v" (t.d. v0.1.0), eller manuelt via
-# workflow_dispatch (køyr då mot ein tag-ref i UI-et).
+# To måtar å trigge:
+#   1. workflow_dispatch (tilrådd, fungerer frå mobil): Actions → Release → Run workflow,
+#      skriv versjon (t.d. v0.1.2). Workflowen lagar sjølv tag + release + artefakt.
+#   2. push av ein tag vMAJOR.MINOR.PATCH (frå ei maskin med push-tilgang).
+#
+# IKKJE lag release-en manuelt i web-UI-et: med "immutable releases" blir han låst ved
+# publisering, og då får workflowen ikkje lagt på APK-en. Lat workflowen gjere det.
 #
 # Krev fire repository-secrets — sjå RELEASING.md:
 #   RELEASE_KEYSTORE_BASE64, RELEASE_KEYSTORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD
@@ -14,6 +19,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Versjon å sleppe (t.d. v0.1.2)"
+        required: true
+        type: string
 
 permissions:
   contents: write # opprette release + laste opp artefakt
@@ -40,12 +50,16 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Utled versjon frå tag
+      - name: Utled versjon
         id: ver
         run: |
-          tag="${GITHUB_REF_NAME}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.version }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
           if ! printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::Taggen '$tag' må vere på forma vMAJOR.MINOR.PATCH (t.d. v0.2.0)."
+            echo "::error::Versjon '$tag' må vere på forma vMAJOR.MINOR.PATCH (t.d. v0.1.2)."
             exit 1
           fi
           name="${tag#v}"
@@ -56,9 +70,12 @@ jobs:
             exit 1
           fi
           code=$(( major * 10000 + minor * 100 + patch ))
-          echo "name=$name" >> "$GITHUB_OUTPUT"
-          echo "code=$code" >> "$GITHUB_OUTPUT"
-          echo "Release $name (versionCode $code)"
+          {
+            echo "tag=$tag"
+            echo "name=$name"
+            echo "code=$code"
+          } >> "$GITHUB_OUTPUT"
+          echo "Release $tag (versionName $name, versionCode $code)"
 
       - name: Dekod release-keystore
         env:
@@ -92,7 +109,7 @@ jobs:
       - name: Gi nytt namn + lag checksum
         id: artefakt
         run: |
-          tag="${GITHUB_REF_NAME}"
+          tag="${{ steps.ver.outputs.tag }}"
           src=$(find app/build/outputs/apk/release -name "*.apk" | head -n1)
           out="autodict-${tag}.apk"
           cp "$src" "$out"
@@ -100,15 +117,26 @@ jobs:
           echo "apk=$out" >> "$GITHUB_OUTPUT"
 
       - name: Attester build-proveniens (SLSA)
+        # Berre tilgjengeleg for offentlege repo (eller org + GitHub Advanced Security).
+        # Hoppar pent over på private brukar-repo; aktiverast automatisk om repoet blir
+        # offentleg. continue-on-error som ekstra sikring.
+        if: ${{ !github.event.repository.private }}
+        continue-on-error: true
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: ${{ steps.artefakt.outputs.apk }}
 
       - name: Publiser GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ${{ steps.artefakt.outputs.apk }}
-            SHA256SUMS
-          generate_release_notes: true
-          fail_on_unmatched_files: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.ver.outputs.tag }}"
+          # Immutable releases låser ved publisering, så artefakta MÅ vere på plass før det.
+          # Difor: lag som draft, last opp, og publiser deretter.
+          gh release create "$tag" \
+            --target "$GITHUB_SHA" \
+            --title "Autodict ${{ steps.ver.outputs.name }}" \
+            --generate-notes \
+            --draft \
+            "${{ steps.artefakt.outputs.apk }}" SHA256SUMS
+          gh release edit "$tag" --draft=false --latest
