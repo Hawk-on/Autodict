@@ -87,11 +87,41 @@ lyd og transkripsjon kan ikkje testast i emulator utan vidare).
 - Storage Access Framework + DocumentFile
 - DataStore, kotlinx.serialization, coroutines
 
-## Lisensar og attribusjon
+## Lisens
+
+Autodict er fri programvare under **GNU Affero General Public License v3.0 eller seinare
+(AGPL-3.0-or-later)** – sjå [`LICENSE`](LICENSE).
+
+Copyright © 2026 Håkon Hole Lønning.
+
+- **Du kan** bruke, studere, endre, byggje frå kjelde og distribuere appen, så lenge avleidde
+  verk òg blir gjorde tilgjengelege under AGPL. AGPL inneber dessutan at om du tilbyr appen
+  som ei *nett-teneste*, må kjeldekoden (med endringane dine) gjerast tilgjengeleg for
+  brukarane.
+- **SPDX:** `AGPL-3.0-or-later`.
+
+### Kommersiell lisens
+
+Opphavsretten ligg hos forfattaren, som åtaheld retten til kommersialisering. Vil du bruke
+Autodict (eller delar av koden) i eit **proprietært/lukka produkt** utan AGPL-pliktene, er ein
+**separat kommersiell lisens** tilgjengeleg – ta kontakt med opphavshavaren (sjå GitHub-profilen).
+
+### Bidrag
+
+Bidrag er velkomne. For at dual-lisensieringa over skal vere mogleg, må forfattaren kunne
+re-lisensiere innkomne bidrag. Ved å sende inn ein pull request samtykkjer du difor i at
+bidraget ditt blir lisensiert under AGPL-3.0 **og** at vedlikehaldaren får rett til å tilby
+det same bidraget under ein kommersiell lisens. (Ein formell CLA/DCO-prosess kan kome når
+prosjektet veks.)
+
+## Tredjeparts-attribusjon
 
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp) – MIT.
 - **NB-Whisper** av Nasjonalbiblioteket (NbAiLab). Sjå modellkortet på Hugging Face for
   nøyaktige lisensvilkår og attribusjonskrav før distribusjon.
+
+Full oversikt i [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Merk: AGPL er kompatibel
+med permissive avhengnader (MIT/Apache/BSD), men unngå å bundle inkompatible bitar.
 
 ## Status / milepælar
 
