@@ -1,0 +1,32 @@
+# Dependabot – automatiske oppdateringar av avhengnader.
+# Konservativt: vekentleg, grupperte minor/patch-PR-ar (mindre støy), major som
+# eigne PR-ar (kan brekke – fortener merksemd). Sjå:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates
+version: 2
+updates:
+  # Gradle: app-avhengnader (les òg gradle/libs.versions.toml).
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      # Slå saman alle minor/patch til éin PR; major held seg utanfor gruppa.
+      gradle-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions brukt i workflowane (checkout, setup-java, gh-release, …).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
