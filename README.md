@@ -1,5 +1,7 @@
 # Autodict
 
+[![Sponsor](https://img.shields.io/github/sponsors/Hawk-on?logo=githubsponsors&label=Sponsor&color=ea4aaa)](https://github.com/sponsors/Hawk-on)
+
 Ein **Android native-app** (Kotlin + Jetpack Compose) som tek opp tale og lagar ei
 **taledagbok** med **transkripsjon på eininga (offline)** og god norsk-støtte.
 
@@ -86,6 +88,11 @@ lyd og transkripsjon kan ikkje testast i emulator utan vidare).
 - whisper.cpp (NDK/JNI) + NB-Whisper GGML-modellar (M4)
 - Storage Access Framework + DocumentFile
 - DataStore, kotlinx.serialization, coroutines
+
+## Støtt utviklinga
+
+Autodict er gratis og fri programvare. Vil du støtte vidare utvikling, set eg stor pris på det
+via **[GitHub Sponsors](https://github.com/sponsors/Hawk-on)** 💜
 
 ## Lisens
 
