@@ -53,6 +53,10 @@ jobs:
           # Release treng ikkje sende inn dependency-graf (android.yml gjer det på main).
           dependency-graph: disabled
 
+      # AGP lastar ned NDK + CMake for det native whisper.cpp-byggjet (M4).
+      - name: Aksepter Android SDK-lisensar
+        run: yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+
       - name: Utled versjon
         id: ver
         run: |

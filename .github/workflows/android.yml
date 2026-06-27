@@ -39,6 +39,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      # AGP lastar ned NDK + CMake for det native whisper.cpp-byggjet (M4); krev aksepterte
+      # SDK-lisensar. Idempotent – no-op om alt alt er på plass.
+      - name: Aksepter Android SDK-lisensar
+        run: yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+
       # Éin Gradle-invokasjon: konfigurerer éin gong og deler Kotlin-/Compose-kompileringa
       # på tvers av assemble/test/lint i staden for tre separate køyringar. Variant-
       # spesifikke taskar (Debug) hoppar over release-test/-lint som CI ikkje treng.
