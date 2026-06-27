@@ -135,7 +135,8 @@ med permissive avhengnader (MIT/Apache/BSD), men unngå å bundle inkompatible b
 - [x] **M0** – Prosjektskjelett + dokumentasjon
 - [x] **M1** – SAF-lagring
 - [x] **M2** – MVP: opptak + manuell tekst + lagring
-- [ ] **M3** – Lokal indeks + Opus-arkiv
+- [x] **M3a** – Lokal indeks (JSON-cache + billig mtime-reconcile)
+- [ ] **M3b** – Opus-arkiv (MediaCodec; krev minSdk-avgjerd)
 - [ ] **M4** – Offline transkripsjon (whisper.cpp + NB-Whisper)
 - [ ] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender
 - [ ] **M6** – Google Tasks + del-til-Keep

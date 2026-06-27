@@ -12,6 +12,12 @@ import java.io.File
 /** Ei markdown-fil funne i mappa: namn, URI og innhald. */
 data class MarkdownFile(val name: String, val uri: Uri, val content: String)
 
+/** Lett referanse til ei markdown-fil: namn, URI og mtime – utan innhaldet. */
+data class MarkdownRef(val name: String, val uri: Uri, val lastModified: Long) {
+    /** Oppførings-id = filnamn utan `.md` (filnamnet er `<id>.md`). */
+    val id: String get() = if (name.endsWith(".md", ignoreCase = true)) name.dropLast(3) else name
+}
+
 /**
  * All lagring mot den brukarvalde mappa (Storage Access Framework).
  *
@@ -154,6 +160,21 @@ class SafRepository(
                 resolver.openInputStream(file.uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
             }.getOrNull() ?: return@mapNotNull null
             MarkdownFile(name, file.uri, content)
+        }
+    }
+
+    /**
+     * List alle `.md`-filer med namn/URI/mtime, men **utan** å lese innhaldet. Billig
+     * stale-sjekk for indeksen ([com.autodict.data.index]); innhaldet lesast berre for
+     * filer som faktisk er endra.
+     */
+    suspend fun listMarkdownFileRefs(): List<MarkdownRef> = withContext(Dispatchers.IO) {
+        val root = root() ?: return@withContext emptyList()
+        val found = mutableListOf<DocumentFile>()
+        collectMarkdown(root, found)
+        found.mapNotNull { file ->
+            val name = file.name ?: return@mapNotNull null
+            MarkdownRef(name, file.uri, file.lastModified())
         }
     }
 
