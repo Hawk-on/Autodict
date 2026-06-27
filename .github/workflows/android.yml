@@ -21,6 +21,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Avgrens dependency-graf-innsendinga (setup-gradle) til runtime-konfigurasjonar –
+    # altså det som faktisk hamnar i APK-en. Byggje-/plugin-klassestien (Develocity m.m.)
+    # blir halden ute, så vi slepp Dependabot-alertar på CI-verktøy som aldri blir levert.
+    env:
+      DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS: ".*RuntimeClasspath"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
