@@ -49,6 +49,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          # Release treng ikkje sende inn dependency-graf (android.yml gjer det på main).
+          dependency-graph: disabled
 
       - name: Utled versjon
         id: ver
