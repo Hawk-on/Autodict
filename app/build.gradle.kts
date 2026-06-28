@@ -24,6 +24,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Berre arm64 er aktuelt for whisper.cpp på reelle telefonar (M4).
         // x86 kan leggjast til for emulator ved behov.
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
     }
 
     signingConfigs {
@@ -61,6 +64,15 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    // Native whisper.cpp-bygg (M4). CMake hentar whisper.cpp via FetchContent ved
+    // configure-tid; AGP lastar ned NDK + CMake automatisk på CI/maskin om dei manglar.
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 }
 

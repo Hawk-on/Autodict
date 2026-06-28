@@ -3,7 +3,9 @@
 Levande sjekkliste. **Fyll ut / verifiser når komponenten faktisk blir lagt til** (milepæl i
 parentes). Mål: oppfylle attribusjonskrav og halde appen fri for utilsikta copyleft.
 
-> Status: planlagt. Ingen av desse er integrert i koden enno (per M0).
+> Status: **whisper.cpp + ggml (MIT) er no integrert** via CMake FetchContent, pinna til
+> `v1.9.1` (M4a, native byggjeskjelett). NB-Whisper-modellen lastast ned i M4b. Resten er
+> framleis planlagt.
 
 ## Bibliotek / motorar
 
