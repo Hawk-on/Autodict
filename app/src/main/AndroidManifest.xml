@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Nett trengst berre til opt-in-funksjonar (Google Tasks, Claude API, modell-nedlasting). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- For å sjekke om vi er på Wi-Fi før modell-nedlasting (M4). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:name=".AutodictApp"
