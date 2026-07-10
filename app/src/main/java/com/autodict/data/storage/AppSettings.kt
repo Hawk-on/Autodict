@@ -3,9 +3,11 @@ package com.autodict.data.storage
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.autodict.data.transcribe.WhisperModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -28,7 +30,25 @@ class AppSettings(private val context: Context) {
         }
     }
 
+    /** Vald Whisper-modellstorleik for transkripsjon (M4). Standard = small. */
+    val whisperModelId: Flow<String> =
+        context.dataStore.data.map { prefs -> prefs[WHISPER_MODEL] ?: WhisperModel.DEFAULT.id }
+
+    suspend fun setWhisperModelId(id: String) {
+        context.dataStore.edit { prefs -> prefs[WHISPER_MODEL] = id }
+    }
+
+    /** Berre last ned modellar på Wi-Fi (standard på). */
+    val wifiOnlyDownload: Flow<Boolean> =
+        context.dataStore.data.map { prefs -> prefs[WIFI_ONLY] ?: true }
+
+    suspend fun setWifiOnlyDownload(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[WIFI_ONLY] = enabled }
+    }
+
     private companion object {
         val TREE_URI = stringPreferencesKey("tree_uri")
+        val WHISPER_MODEL = stringPreferencesKey("whisper_model")
+        val WIFI_ONLY = booleanPreferencesKey("wifi_only_download")
     }
 }
