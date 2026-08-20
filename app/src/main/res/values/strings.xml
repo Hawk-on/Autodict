@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Autodict</string>
-
-    <!-- OAuth 2.0-klient-ID (type "Web application") frå Google Cloud Console. Brukt av
-         Credential Manager for å kople til ein Google-konto (M6, Google Tasks). Dette er ein
-         offentleg klient-ID – ikkje ei hemmelegheit – men står tom som standard slik at appen
-         byggjer utan prosjektspesifikk konfigurasjon. Fyll ut før Google Tasks-kopling kan
-         brukast; sjå GoogleAccountLinker.kt. -->
-    <string name="google_oauth_client_id" translatable="false"></string>
 </resources>

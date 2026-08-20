@@ -15,12 +15,8 @@ parentes). Mål: oppfylle attribusjonskrav og halde appen fri for utilsikta copy
 | whisper.cpp (ggml-org) | Transkripsjon (M4) | MIT | Nei | Behald MIT-varsel |
 | llama.cpp (ggml-org) | Lokal LLM (M8) | MIT | Nei | Behald MIT-varsel |
 | sherpa-onnx (k2-fsa) | Offline TTS-motor (M9) | Apache 2.0 | Nei | Behald varsel |
-| OkHttp / Retrofit (om brukt) | Nett (Tasks/Claude) | Apache 2.0 | Nei | Behald varsel |
+| OkHttp / Retrofit (om brukt) | Nett (Claude, framtidig opt-in) | Apache 2.0 | Nei | Behald varsel |
 | Guava (Google) | Direkte avhengnad, fiksar sårbarheiter i transitive bibliotek (M5) | Apache 2.0 | Nei | Behald varsel |
-| Credential Manager (androidx.credentials) | Kontokopling for Google Tasks (M6) | Apache 2.0 | Nei | Behald varsel |
-| Google Identity Services (googleid) | ID-token-parsing for Credential Manager (M6) | Apache 2.0 | Nei | Behald varsel |
-| Play Services Auth (Authorization API) | Scope-samtykke for Google Tasks (M6) | Google Play Services-vilkår (proprietær, gratis) | Nei | Berre på einingar med Google Play Services |
-| OkHttp | REST-kall mot Google Tasks API (M6) | Apache 2.0 | Nei | Behald varsel |
 
 ## Modellar
 

@@ -1,7 +1,5 @@
 package com.autodict.ui.detail
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +26,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
@@ -52,15 +49,6 @@ fun EntryDetailScreen(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
-
-    val consentLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult(),
-    ) { result ->
-        viewModel.onGoogleTaskConsentResult(result.resultCode, result.data)
-    }
-    LaunchedEffect(ui.pendingGoogleTaskConsent) {
-        ui.pendingGoogleTaskConsent?.let { consentLauncher.launch(it) }
-    }
 
     Scaffold(
         topBar = {
@@ -181,10 +169,20 @@ fun EntryDetailScreen(
                                                     viewModel.reportMessage("Fann inga kalender-app på eininga.")
                                                 }
                                             } else {
-                                                viewModel.createGoogleTask(action)
+                                                // Google Tasks har ingen del-mottakar; brukaren vel sjølv
+                                                // kvar gjeremålet skal (t.d. ein oppgåve-app) i del-arket.
+                                                val shared = ShareToKeep.share(
+                                                    context,
+                                                    action.title,
+                                                    action.time?.let { "${action.title}\n\n$it" } ?: action.title,
+                                                    chooserTitle = "Del gjeremål",
+                                                )
+                                                if (!shared) {
+                                                    viewModel.reportMessage("Fann ingen app å dele gjeremålet til.")
+                                                }
                                             }
                                         }) {
-                                            Text(if (action.type == ActionType.CALENDAR_EVENT) "Legg til i kalender" else "Godkjenn oppgåve")
+                                            Text(if (action.type == ActionType.CALENDAR_EVENT) "Legg til i kalender" else "Del gjeremål")
                                         }
                                     }
                                 }

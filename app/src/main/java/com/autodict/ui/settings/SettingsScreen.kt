@@ -235,44 +235,6 @@ fun SettingsScreen(
             }
 
             HorizontalDivider()
-            Text("Google Tasks (eksperimentell, opt-in)", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Godkjende gjeremål frå ei oppføring kan sendast vidare til Google Tasks. " +
-                    "Krev nett og Google-konto; heilt av som standard – appen fungerer utan.",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(
-                    checked = ui.googleTasksEnabled,
-                    onCheckedChange = { viewModel.setGoogleTasksEnabled(it) },
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Aktiver Google Tasks", style = MaterialTheme.typography.bodyMedium)
-            }
-            if (ui.googleTasksEnabled) {
-                if (ui.googleAccountEmail != null) {
-                    Text(
-                        "Kopla til: ${ui.googleAccountEmail}",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    TextButton(
-                        onClick = { viewModel.unlinkGoogleAccount() },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Koble frå Google-konto")
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = { viewModel.linkGoogleAccount(context) },
-                        enabled = !ui.linkingAccount,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(if (ui.linkingAccount) "Koplar til …" else "Koble til Google-konto")
-                    }
-                }
-            }
-
-            HorizontalDivider()
             Text("Om", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Autodict er gratis og fri programvare (AGPL-3.0).",
