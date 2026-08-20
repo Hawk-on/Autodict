@@ -83,6 +83,11 @@ portabel på tvers av system.
 APK-en hamnar i `app/build/outputs/apk/debug/`. Sideload på telefon for testing (mikrofon,
 lyd og transkripsjon kan ikkje testast i emulator utan vidare).
 
+> **Testar du transkripsjon?** Bruk helst den signerte APK-en frå
+> [Releases](https://github.com/Hawk-on/Autodict/releases). Debug- og release-APK-ar har ulik
+> signatur, så du må avinstallere den eine for å installere den andre – og det slettar
+> appdata, inkludert den nedlasta språkmodellen (181–514 MB).
+
 ## Teknologi
 
 - Kotlin + Jetpack Compose, Material 3
