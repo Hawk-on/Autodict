@@ -39,7 +39,7 @@ Dagboka *er* berre filer – det finst inga skjult database. Strukturen er:
   2026/
     2026-06/
       2026-06-02T14-03-12-eit-kort-notat.md
-      2026-06-02T14-03-12-eit-kort-notat.wav   (eller .opus)
+      2026-06-02T14-03-12-eit-kort-notat.opus  (eller .wav)
 ```
 
 Kvar `.md`-fil har YAML-frontmatter med all metadata:
@@ -50,7 +50,7 @@ id: 2026-06-02T14-03-12
 created: 2026-06-02T14:03:12+02:00
 updated: 2026-06-02T14:05:00+02:00
 title: Eit kort notat
-audio: 2026-06-02T14-03-12-eit-kort-notat.wav
+audio: 2026-06-02T14-03-12-eit-kort-notat.opus
 duration_seconds: 42
 language: no
 transcribed: true
@@ -137,7 +137,7 @@ med permissive avhengnader (MIT/Apache/BSD), men unngå å bundle inkompatible b
 - [x] **M1** – SAF-lagring
 - [x] **M2** – MVP: opptak + manuell tekst + lagring
 - [x] **M3a** – Lokal indeks (JSON-cache + billig mtime-reconcile)
-- [ ] **M3b** – Opus-arkiv (MediaCodec; krev minSdk-avgjerd)
+- [x] **M3b** – Opus-arkiv (MediaCodec; minSdk 29)
 - [x] **M4** – Offline transkripsjon (whisper.cpp + NB-Whisper)
 - [ ] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender
 - [ ] **M6** – Google Tasks + del-til-Keep

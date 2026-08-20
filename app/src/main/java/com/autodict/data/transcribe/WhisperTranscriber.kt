@@ -1,7 +1,6 @@
 package com.autodict.data.transcribe
 
 import com.autodict.data.audio.AudioResampler
-import com.autodict.data.audio.WavParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -26,29 +25,30 @@ class WhisperTranscriber(
     private var loadedModel: WhisperModel? = null
     private var contextPtr: Long = 0L
 
-    override suspend fun transcribe(wavBytes: ByteArray, language: String): TranscriptionResult {
+    override suspend fun transcribe(
+        samples: FloatArray,
+        sampleRate: Int,
+        language: String,
+    ): TranscriptionResult {
         val model = selectedModel()
         if (!downloader.isDownloaded(model)) {
             return TranscriptionResult.Failure(
                 "Modellen «${model.displayName}» er ikkje lasta ned. Gå til Innstillingar.",
             )
         }
-
-        val wav = WavParser.parse(wavBytes)
-            ?: return TranscriptionResult.Failure("Klarte ikkje lese lydfila (ventar 16-bits PCM-WAV).")
-        if (wav.samples.isEmpty()) {
+        if (samples.isEmpty()) {
             return TranscriptionResult.Failure("Lydfila er tom.")
         }
 
         return withContext(Dispatchers.Default) {
             // Opptak skjer i 48 kHz for arkivet sin del; whisper vil ha 16 kHz.
-            val samples = AudioResampler.toWhisperRate(wav.samples, wav.sampleRate)
+            val forWhisper = AudioResampler.toWhisperRate(samples, sampleRate)
             mutex.withLock {
                 runCatching {
                     val ptr = ensureContext(model)
                     val text = WhisperJni.nativeTranscribe(
                         ptr,
-                        samples,
+                        forWhisper,
                         WhisperLanguage.forEntry(language),
                     )
                     TranscriptionResult.Success(text.trim(), model.frontmatterId)

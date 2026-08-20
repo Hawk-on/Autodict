@@ -12,11 +12,15 @@ sealed interface TranscriptionResult {
  * Tale → tekst. Implementasjonar: [WhisperTranscriber] (offline, whisper.cpp) i M4;
  * seinare kan andre motorar leggjast bak same kontrakt.
  *
- * @param wavBytes heile WAV-fila slik ho ligg i dagbok-mappa.
+ * Motoren tek ferdig dekoda lyd, ikkje ei fil – filformata (WAV, Opus) er
+ * [com.autodict.data.audio.AudioLoader] sitt ansvar.
+ *
+ * @param samples mono float-PCM i [-1, 1].
+ * @param sampleRate raten [samples] ligg i; motoren resamplar sjølv ved behov.
  * @param language målform frå oppføringa (`no`/`nb`/`nn`) – sjå [WhisperLanguage].
  */
 interface Transcriber {
-    suspend fun transcribe(wavBytes: ByteArray, language: String): TranscriptionResult
+    suspend fun transcribe(samples: FloatArray, sampleRate: Int, language: String): TranscriptionResult
 }
 
 /**

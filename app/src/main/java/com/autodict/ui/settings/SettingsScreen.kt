@@ -207,6 +207,22 @@ fun SettingsScreen(
             }
 
             HorizontalDivider()
+            Text("Lydarkiv", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Opptak blir arkiverte som Opus (~0,2 MB/min). Tapsfri WAV tek ~5,6 MB/min, " +
+                    "men er uendra lyd rett frå mikrofonen.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(
+                    checked = ui.keepOriginalWav,
+                    onCheckedChange = { viewModel.setKeepOriginalWav(it) },
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Arkiver tapsfri WAV i staden", style = MaterialTheme.typography.bodyMedium)
+            }
+
+            HorizontalDivider()
             Text("Om", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Autodict er gratis og fri programvare (AGPL-3.0).",

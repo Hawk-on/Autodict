@@ -36,6 +36,7 @@ data class SettingsUiState(
     val downloadFraction: Float? = null,
     val language: TargetLanguage = TargetLanguage.DEFAULT,
     val autoTranscribe: Boolean = false,
+    val keepOriginalWav: Boolean = false,
 )
 
 /**
@@ -77,6 +78,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 modelDownloaded = downloader.isDownloaded(WhisperModel.fromId(id)),
                 language = TargetLanguage.fromCode(settings.transcriptionLanguage.first()),
                 autoTranscribe = settings.autoTranscribe.first(),
+                keepOriginalWav = settings.keepOriginalWav.first(),
             )
         }
     }
@@ -127,6 +129,13 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             settings.setAutoTranscribe(enabled)
             _ui.value = _ui.value.copy(autoTranscribe = enabled)
+        }
+    }
+
+    fun setKeepOriginalWav(enabled: Boolean) {
+        viewModelScope.launch {
+            settings.setKeepOriginalWav(enabled)
+            _ui.value = _ui.value.copy(keepOriginalWav = enabled)
         }
     }
 

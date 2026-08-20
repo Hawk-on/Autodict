@@ -13,7 +13,9 @@ android {
 
     defaultConfig {
         applicationId = "com.autodict"
-        minSdk = 26
+        // API 29 (Android 10) er kravet for MediaMuxer sin OGG-utgang, som Opus-arkivet
+        // (M3b) byggjer på. Dekkjer godt over 95 % av einingar i bruk.
+        minSdk = 29
         targetSdk = 37
 
         // Versjon kjem frå release-taggen (vX.Y.Z) via CI – sjå RELEASING.md.

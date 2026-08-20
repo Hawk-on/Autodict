@@ -66,8 +66,20 @@ class AppSettings(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[AUTO_TRANSCRIBE] = enabled }
     }
 
+    /**
+     * Arkiver tapsfri WAV i staden for Opus. Standard av – Opus på ~32 kbit/s er
+     * perseptuelt utmerkt for tale og tek ~1/23 av plassen (0,24 mot 5,6 MB/min).
+     */
+    val keepOriginalWav: Flow<Boolean> =
+        context.dataStore.data.map { prefs -> prefs[KEEP_WAV] ?: false }
+
+    suspend fun setKeepOriginalWav(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEEP_WAV] = enabled }
+    }
+
     private companion object {
         val TREE_URI = stringPreferencesKey("tree_uri")
+        val KEEP_WAV = booleanPreferencesKey("keep_original_wav")
         val WHISPER_MODEL = stringPreferencesKey("whisper_model")
         val WIFI_ONLY = booleanPreferencesKey("wifi_only_download")
         val TRANSCRIPTION_LANGUAGE = stringPreferencesKey("transcription_language")

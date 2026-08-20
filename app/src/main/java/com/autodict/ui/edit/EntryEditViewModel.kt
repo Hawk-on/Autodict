@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.autodict.data.audio.AudioLoader
+import com.autodict.data.audio.OpusEncoder
 import com.autodict.data.diary.createDiaryRepository
 import com.autodict.data.storage.AppSettings
 import com.autodict.data.storage.StoragePaths
@@ -16,8 +18,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -85,13 +89,14 @@ class EntryEditViewModel(
         viewModelScope.launch {
             _ui.update { it.copy(transcribing = true, message = "Transkriberer …") }
 
-            val bytes = runCatching { File(path).readBytes() }.getOrNull()
-            if (bytes == null) {
+            // Transkriberer frå den tapsfrie cache-WAV-en, før Opus-koding ved lagring.
+            val audio = AudioLoader.load(File(path))
+            if (audio == null) {
                 _ui.update { it.copy(transcribing = false, message = "Fann ikkje opptaket.") }
                 return@launch
             }
 
-            when (val result = transcriber.transcribe(bytes, _ui.value.language.code)) {
+            when (val result = transcriber.transcribe(audio.samples, audio.sampleRate, _ui.value.language.code)) {
                 is TranscriptionResult.Failure ->
                     _ui.update { it.copy(transcribing = false, message = result.message) }
 
@@ -130,11 +135,15 @@ class EntryEditViewModel(
             val createdIso = OffsetDateTime.ofInstant(instant, zone)
                 .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
+            // Arkiver som Opus (~1/23 av plassen). Feilar kodinga, lagrar vi WAV-en –
+            // eit opptak skal aldri gå tapt fordi ein kodek oppførte seg uventa.
+            val archive = audioPath?.let { prepareArchive(File(it)) }
+
             val entry = DiaryEntry(
                 id = id,
                 created = createdIso,
                 title = title.ifBlank { "Utan tittel" },
-                audio = if (audioPath != null) "$id.wav" else null,
+                audio = archive?.let { "$id.${it.extension}" },
                 durationSeconds = durationSeconds,
                 language = state.language.code,
                 transcribed = state.transcribedModel != null,
@@ -143,9 +152,11 @@ class EntryEditViewModel(
                 body = state.body.trim(),
             )
 
-            val ok = repo.save(entry, audioPath?.let(::File))
+            val ok = repo.save(entry, archive?.file)
             if (ok) {
-                audioPath?.let { runCatching { File(it).delete() } } // rydd opp cache-fila
+                // Rydd cache: både originalopptaket og ei eventuell Opus-fil.
+                audioPath?.let { runCatching { File(it).delete() } }
+                archive?.file?.let { runCatching { if (it.path != audioPath) it.delete() } }
                 onSaved()
             } else {
                 _ui.update {
@@ -156,6 +167,20 @@ class EntryEditViewModel(
                 }
             }
         }
+    }
+
+    private class Archive(val file: File, val extension: String)
+
+    /**
+     * Vel arkivfila: Opus når kodinga går bra, elles den tapsfrie WAV-en. Brukaren kan
+     * òg velje WAV eksplisitt i innstillingane.
+     */
+    private suspend fun prepareArchive(wav: File): Archive {
+        if (settings.keepOriginalWav.first()) return Archive(wav, "wav")
+
+        val opus = File(wav.parentFile, "${wav.nameWithoutExtension}.${OpusEncoder.FILE_EXTENSION}")
+        val encoded = withContext(Dispatchers.Default) { OpusEncoder.encode(wav, opus) }
+        return if (encoded) Archive(opus, OpusEncoder.FILE_EXTENSION) else Archive(wav, "wav")
     }
 
     override fun onCleared() {
