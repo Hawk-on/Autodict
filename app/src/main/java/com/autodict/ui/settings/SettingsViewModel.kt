@@ -15,6 +15,7 @@ import com.autodict.data.transcribe.ModelDownloader
 import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.WhisperJni
 import com.autodict.data.transcribe.WhisperModel
+import com.autodict.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +39,7 @@ data class SettingsUiState(
     val language: TargetLanguage = TargetLanguage.DEFAULT,
     val autoTranscribe: Boolean = false,
     val keepOriginalWav: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.DEFAULT,
     /** Resultat frå sjølvtesten – null til brukaren har køyrt han. */
     val diagnostics: String? = null,
 )
@@ -82,6 +84,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 language = TargetLanguage.fromCode(settings.transcriptionLanguage.first()),
                 autoTranscribe = settings.autoTranscribe.first(),
                 keepOriginalWav = settings.keepOriginalWav.first(),
+                themeMode = ThemeMode.fromId(settings.themeMode.first()),
             )
         }
     }
@@ -132,6 +135,13 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             settings.setAutoTranscribe(enabled)
             _ui.value = _ui.value.copy(autoTranscribe = enabled)
+        }
+    }
+
+    fun selectThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            settings.setThemeMode(mode.id)
+            _ui.value = _ui.value.copy(themeMode = mode)
         }
     }
 

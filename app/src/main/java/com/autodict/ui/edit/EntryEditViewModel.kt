@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.autodict.data.audio.AudioLoader
 import com.autodict.data.audio.OpusEncoder
+import com.autodict.data.diary.SaveStage
 import com.autodict.data.diary.createDiaryRepository
 import com.autodict.data.storage.AppSettings
 import com.autodict.data.storage.StoragePaths
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,6 +35,8 @@ data class EditUiState(
     val title: String = "",
     val body: String = "",
     val saving: Boolean = false,
+    /** Kva lagringa held på med no – vist medan ein ventar (kan ta tid mot Drive). */
+    val saveStage: SaveStage? = null,
     val error: String? = null,
     val audioPath: String? = null,
     val language: TargetLanguage = TargetLanguage.DEFAULT,
@@ -123,7 +128,7 @@ class EntryEditViewModel(
 
     fun save(onSaved: () -> Unit) {
         if (_ui.value.saving) return
-        _ui.update { it.copy(saving = true, error = null) }
+        _ui.update { it.copy(saving = true, saveStage = SaveStage.EncodingAudio, error = null) }
         viewModelScope.launch {
             val zone = ZoneId.systemDefault()
             val instant = Instant.ofEpochMilli(createdMillis)
@@ -135,33 +140,49 @@ class EntryEditViewModel(
             val createdIso = OffsetDateTime.ofInstant(instant, zone)
                 .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
-            // Arkiver som Opus (~1/23 av plassen). Feilar kodinga, lagrar vi WAV-en –
-            // eit opptak skal aldri gå tapt fordi ein kodek oppførte seg uventa.
-            val archive = audioPath?.let { prepareArchive(File(it)) }
+            // Sjølve skrivinga er NonCancellable: blir denne ViewModel-en rydda medan vi
+            // held på (appen swipa vekk, aktiviteten avslutta), skal vi ikkje etterlate ei
+            // .md-fil utan lyd. Arbeidet er avgrensa, så det er trygt å la det fullføre.
+            val ok = withContext(NonCancellable) {
+                // Arkiver som Opus (~1/23 av plassen). Feilar kodinga, lagrar vi WAV-en –
+                // eit opptak skal aldri gå tapt fordi ein kodek oppførte seg uventa.
+                val archive = audioPath?.let { prepareArchive(File(it)) }
 
-            val entry = DiaryEntry(
-                id = id,
-                created = createdIso,
-                title = title.ifBlank { "Utan tittel" },
-                audio = archive?.let { "$id.${it.extension}" },
-                durationSeconds = durationSeconds,
-                language = state.language.code,
-                transcribed = state.transcribedModel != null,
-                model = state.transcribedModel,
-                tags = emptyList(),
-                body = state.body.trim(),
-            )
+                val entry = DiaryEntry(
+                    id = id,
+                    created = createdIso,
+                    title = title.ifBlank { "Utan tittel" },
+                    audio = archive?.let { "$id.${it.extension}" },
+                    durationSeconds = durationSeconds,
+                    language = state.language.code,
+                    transcribed = state.transcribedModel != null,
+                    model = state.transcribedModel,
+                    tags = emptyList(),
+                    body = state.body.trim(),
+                )
 
-            val ok = repo.save(entry, archive?.file)
+                val saved = repo.save(entry, archive?.file) { stage ->
+                    _ui.update { it.copy(saveStage = stage) }
+                }
+                if (saved) {
+                    // Rydd cache: både originalopptaket og ei eventuell Opus-fil.
+                    audioPath?.let { runCatching { File(it).delete() } }
+                    archive?.file?.let { runCatching { if (it.path != audioPath) it.delete() } }
+                }
+                saved
+            }
+
+            // Vart scopet kansellert undervegs, kastar denne linja – lagringa over er
+            // fullført, men vi skal ikkje navigere i ein nav-graf som ikkje finst lenger.
+            ensureActive()
+
             if (ok) {
-                // Rydd cache: både originalopptaket og ei eventuell Opus-fil.
-                audioPath?.let { runCatching { File(it).delete() } }
-                archive?.file?.let { runCatching { if (it.path != audioPath) it.delete() } }
                 onSaved()
             } else {
                 _ui.update {
                     it.copy(
                         saving = false,
+                        saveStage = null,
                         error = "Klarte ikkje lagre. Har du vald ei lagringsmappe (Innstillingar)?",
                     )
                 }

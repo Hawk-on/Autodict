@@ -35,6 +35,14 @@ fun createDiaryRepository(context: Context): DiaryRepository {
 /** Ei lasta oppføring med URI til lydfila (om ho finst), klar for avspeling. */
 data class LoadedEntry(val entry: DiaryEntry, val audioUri: Uri?)
 
+/** Stega i ei lagring, så UI-et kan seie kva appen ventar på. */
+enum class SaveStage(val label: String) {
+    EncodingAudio("Kodar lyd …"),
+    WritingText("Skriv teksten …"),
+    WritingAudio("Lastar opp lyden …"),
+    Indexing("Fullfører …"),
+}
+
 /**
  * Les og skriv dagbok-oppføringar mot den brukarvalde mappa. Byggjer på [SafRepository]
  * (rå SAF-I/O) + [FrontmatterSerializer] (md ↔ modell). Filene er kjelda til sanning.
@@ -63,10 +71,7 @@ class DiaryRepository(
      * straumen og persisterer cachen.
      */
     suspend fun sync() {
-        if (!loadedFromStore) {
-            index.value = store.load()
-            loadedFromStore = true
-        }
+        ensureLoaded()
         if (!saf.hasValidFolder()) return
 
         val refs = saf.listMarkdownFileRefs()
@@ -95,17 +100,47 @@ class DiaryRepository(
 
     /**
      * Lagrar ei oppføring: skriv `<id>.md` og kopierer eventuell lydfil til same datomappe,
-     * og oppdaterer indeksen.
+     * og legg ho inn i indeksen.
+     *
+     * [onProgress] rapporterer kva steg som går – lagring mot ei sky-synka mappe (Drive)
+     * er ei nettverksopplasting og kan ta fleire sekund, så UI-et må kunne vise det.
      */
-    suspend fun save(entry: DiaryEntry, audioFile: File?): Boolean {
+    suspend fun save(
+        entry: DiaryEntry,
+        audioFile: File?,
+        onProgress: (SaveStage) -> Unit = {},
+    ): Boolean {
         val folders = StoragePaths.dateFoldersFromId(entry.id)
         val markdown = FrontmatterSerializer.serialize(entry)
-        saf.writeTextFile(folders, "${entry.id}.md", "text/markdown", markdown) ?: return false
+
+        onProgress(SaveStage.WritingText)
+        val mdUri = saf.writeTextFile(folders, "${entry.id}.md", "text/markdown", markdown)
+            ?: return false
+
         if (audioFile != null && entry.audio != null) {
-            saf.copyFileInto(folders, entry.audio, audioMimeType(entry.audio), audioFile) ?: return false
+            onProgress(SaveStage.WritingAudio)
+            saf.copyFileInto(folders, entry.audio, audioMimeType(entry.audio), audioFile)
+                ?: return false
         }
-        sync()
+
+        // Indekser den nye oppføringa direkte i staden for å kalle sync(). Ein full sync
+        // vandrar rekursivt over heile mappa og spør providaren om namn/mtime for kvar fil;
+        // mot Drive er kvart av dei ei nettverks-runde, så det voks til fleire sekund –
+        // rein venting på informasjon vi alt sit på om oppføringa vi nettopp skreiv.
+        // Lista gjer ein full sync sjølv når ho blir opna, så avstemminga mot mappa står.
+        onProgress(SaveStage.Indexing)
+        ensureLoaded()
+        val indexed = IndexedEntry.from(entry.id, saf.lastModifiedOf(mdUri), entry)
+        val updated = index.value.filterNot { it.id == entry.id } + indexed
+        index.value = updated
+        store.save(updated)
         return true
+    }
+
+    private suspend fun ensureLoaded() {
+        if (loadedFromStore) return
+        index.value = store.load()
+        loadedFromStore = true
     }
 
     /** MIME-type ut frå filendinga – dagboka kan innehalde både WAV og Opus (M3b). */

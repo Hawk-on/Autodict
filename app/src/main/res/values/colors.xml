@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#6650A4</color>
+    <color name="ic_launcher_background">#5B51A0</color>
+    <!-- Skal vere lik LightBackground i ui/theme/Color.kt. -->
+    <color name="window_background">#FCFAFF</color>
 </resources>

@@ -1,8 +1,10 @@
 package com.autodict.ui.edit
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -22,9 +25,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -45,22 +52,61 @@ fun EntryEditScreen(
     viewModel: EntryEditViewModel = viewModel(),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
+    var confirmDiscard by remember { mutableStateOf(false) }
+    // Utleidd frå ui-staten (ikkje eit kall inn i ViewModel-en) så den blir lesen på nytt
+    // ved kvar rekomposisjon.
+    val hasUnsavedWork = ui.audioPath != null || ui.title.isNotBlank() || ui.body.isNotBlank()
+
+    // Tilbake medan vi lagrar ville kansellert skrivinga og kasta både opptak og
+    // transkripsjon. Mot ei sky-synka mappe (Drive) tek lagringa fleire sekund, så det er
+    // nettopp då det er mest freistande å trykkje tilbake. Lagringa er kort og avgrensa,
+    // så vi svelgjer tilbake heilt der; elles spør vi før vi forkastar.
+    //
+    // Transkribering blokkerer vi derimot ikkje: med medium-modellen tek ho fleire minutt,
+    // og å låse brukaren inne så lenge er verre enn å miste eit opptak ein sjølv vel bort.
+    BackHandler(enabled = ui.saving || hasUnsavedWork) {
+        if (!ui.saving) confirmDiscard = true
+    }
+
+    if (confirmDiscard) {
+        AlertDialog(
+            onDismissRequest = { confirmDiscard = false },
+            title = { Text("Forkaste opptaket?") },
+            text = { Text("Opptaket og teksten er ikkje lagra enno, og går tapt.") },
+            confirmButton = {
+                TextButton(onClick = { confirmDiscard = false; onBack() }) { Text("Forkast") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDiscard = false }) { Text("Hald fram") }
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Ny oppføring") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = { if (hasUnsavedWork) confirmDiscard = true else onBack() },
+                        enabled = !ui.saving,
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tilbake")
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { viewModel.save(onSaved) },
-                        enabled = !ui.saving && !ui.transcribing,
-                    ) {
-                        Icon(Icons.Default.Check, contentDescription = "Lagre")
+                    if (ui.saving) {
+                        // Ei deaktivert hake ser ut som om ingenting skjer. Spinneren seier
+                        // at appen arbeider, og teksten under kva ho ventar på.
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.size(12.dp))
+                    } else {
+                        IconButton(
+                            onClick = { viewModel.save(onSaved) },
+                            enabled = !ui.transcribing,
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = "Lagre")
+                        }
                     }
                 },
             )
@@ -74,6 +120,24 @@ fun EntryEditScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            ui.saveStage?.let { stage ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Column {
+                        Text(stage.label, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Lagring til ei sky-synka mappe kan ta litt tid. Ikkje gå tilbake – " +
+                                "vi opnar lista når alt er skrive.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+
             ui.audioPath?.let { path ->
                 AudioPlayerBar(AudioSource.LocalFile(path))
 

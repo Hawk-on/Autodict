@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.WhisperModel
+import com.autodict.ui.theme.ThemeMode
 
 private const val SPONSORS_URL = "https://github.com/sponsors/Hawk-on"
 
@@ -132,6 +133,28 @@ fun SettingsScreen(
             ui.message?.let { message ->
                 HorizontalDivider()
                 Text(message, style = MaterialTheme.typography.bodySmall)
+            }
+
+            HorizontalDivider()
+            Text("Utsjånad", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Det mørke temaet brukar ein løfta blågrå botn i staden for svart, og dempa " +
+                    "tekst i staden for rein kvit – mildare for auga i lange lesetøktar.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            ThemeMode.entries.forEach { mode ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.selectThemeMode(mode) },
+                ) {
+                    RadioButton(
+                        selected = ui.themeMode == mode,
+                        onClick = { viewModel.selectThemeMode(mode) },
+                    )
+                    Text(mode.displayName, style = MaterialTheme.typography.bodyMedium)
+                }
             }
 
             HorizontalDivider()
