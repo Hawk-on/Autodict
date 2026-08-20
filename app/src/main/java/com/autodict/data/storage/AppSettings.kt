@@ -77,8 +77,20 @@ class AppSettings(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[KEEP_WAV] = enabled }
     }
 
+    /**
+     * Lyst/mørkt tema, eller følg systemet (standard). Lagra som rå id; tolkinga skjer i
+     * UI-laget (`ThemeMode.fromId`), så datalaget slepp å kjenne til ein Compose-type.
+     */
+    val themeMode: Flow<String> =
+        context.dataStore.data.map { prefs -> prefs[THEME_MODE] ?: "system" }
+
+    suspend fun setThemeMode(id: String) {
+        context.dataStore.edit { prefs -> prefs[THEME_MODE] = id }
+    }
+
     private companion object {
         val TREE_URI = stringPreferencesKey("tree_uri")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
         val KEEP_WAV = booleanPreferencesKey("keep_original_wav")
         val WHISPER_MODEL = stringPreferencesKey("whisper_model")
         val WIFI_ONLY = booleanPreferencesKey("wifi_only_download")

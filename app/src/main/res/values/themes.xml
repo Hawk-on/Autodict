@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Basetema brukt før Compose tek over. Compose styrer fargane via AutodictTheme. -->
-    <style name="Theme.Autodict" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+      Basetema brukt før Compose tek over. Compose styrer fargane via AutodictTheme, men
+      windowBackground er det systemet teiknar i millisekunda før første frame – står han
+      på Light, får ein eit kvitt blink kvar gong appen blir opna i mørkt tema.
+      values-night/ gir den mørke varianten.
+    -->
+    <style name="Theme.Autodict" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>
