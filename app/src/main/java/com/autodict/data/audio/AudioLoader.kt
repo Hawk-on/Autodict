@@ -5,6 +5,7 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -20,6 +21,7 @@ import java.nio.ByteOrder
  */
 object AudioLoader {
 
+    private const val TAG = "autodict-audio"
     private const val TIMEOUT_US = 10_000L
 
     /** Lyd frå dagbok-mappa (SAF). */
@@ -28,16 +30,24 @@ object AudioLoader {
             context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
         }.getOrNull()
 
+        if (bytes == null) Log.w(TAG, "Klarte ikkje lese bytes frå $uri")
+
         // WAV først – då slepp vi plattform-dekodaren heilt.
         bytes?.let(WavParser::parse)?.let { return@withContext it }
 
-        runCatching { decodeCompressed { it.setDataSource(context, uri, null) } }.getOrNull()
+        runCatching { decodeCompressed { it.setDataSource(context, uri, null) } }
+            .onFailure { Log.e(TAG, "Dekoding feila for $uri", it) }
+            .getOrNull()
+            .also { if (it == null) Log.w(TAG, "Fann ingen dekodbar lyd i $uri") }
     }
 
     /** Lyd frå ei lokal fil (t.d. cache-WAV-en rett etter opptak). */
     suspend fun load(file: File): ParsedWav? = withContext(Dispatchers.IO) {
         runCatching { file.readBytes() }.getOrNull()?.let(WavParser::parse)?.let { return@withContext it }
-        runCatching { decodeCompressed { it.setDataSource(file.absolutePath) } }.getOrNull()
+        runCatching { decodeCompressed { it.setDataSource(file.absolutePath) } }
+            .onFailure { Log.e(TAG, "Dekoding feila for ${file.absolutePath}", it) }
+            .getOrNull()
+            .also { if (it == null) Log.w(TAG, "Fann ingen dekodbar lyd i ${file.absolutePath}") }
     }
 
     /**
@@ -110,9 +120,14 @@ object AudioLoader {
                 }
             }
 
-            if (output.isEmpty()) return null
+            if (output.isEmpty()) {
+                Log.w(TAG, "Dekodaren ga ingen sample (mime=$mime, rate=$sampleRate, kanalar=$channels)")
+                return null
+            }
+            Log.i(TAG, "Dekoda $mime: ${output.size} sample @ ${sampleRate}Hz")
             return ParsedWav(FloatArray(output.size) { output[it] }, sampleRate)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Dekoding kasta unntak", e)
             return null
         } finally {
             runCatching { codec?.stop() }

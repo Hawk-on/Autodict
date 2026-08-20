@@ -46,7 +46,13 @@ android {
 
     buildTypes {
         release {
+            // R8 er MELLOMBELS AV. Utan minifisering blir APK-en ~52 MB (nesten alt er
+            // ubrukte ikon frå material-icons-extended), så dette skal på att – men ikkje
+            // medan vi feilsøkjer transkripsjonen (WORK_ITEMS.md). Minifisering kan berre
+            // verifiserast i køyretid, og ein R8-feil ville vore umogleg å skilje frå den
+            // bugen vi jaktar. Reglane ligg klare i proguard-rules.pro.
             isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
