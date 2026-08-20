@@ -185,6 +185,15 @@ class SafRepository(
         }
     }
 
+    /**
+     * mtime for éi enkelt fil. Lèt oss indeksere ei nyskriven oppføring utan å vandre
+     * heile mappa – éi spørjing i staden for hundrevis (viktig mot sky-providerar).
+     * Fell tilbake til 0 om providaren ikkje svarar; då blir fila re-parsa ved neste sync.
+     */
+    suspend fun lastModifiedOf(uri: Uri): Long = withContext(Dispatchers.IO) {
+        runCatching { DocumentFile.fromSingleUri(context, uri)?.lastModified() ?: 0L }.getOrDefault(0L)
+    }
+
     private fun collectMarkdown(dir: DocumentFile, out: MutableList<DocumentFile>) {
         for (child in dir.listFiles()) {
             if (child.isDirectory) {
