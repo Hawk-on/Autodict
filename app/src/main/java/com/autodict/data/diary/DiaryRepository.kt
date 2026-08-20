@@ -108,6 +108,9 @@ class DiaryRepository(
         return true
     }
 
+    /** Les lydfila som rå bytes – brukt av transkripsjonen (M4). */
+    suspend fun readAudioBytes(uri: Uri): ByteArray? = saf.readFileBytes(uri)
+
     /** Hentar ei enkelt oppføring med id, inkludert URI til lydfila. */
     suspend fun get(id: String): LoadedEntry? {
         val folders = StoragePaths.dateFoldersFromId(id)

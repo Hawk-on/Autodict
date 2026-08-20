@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
@@ -72,7 +72,7 @@ fun RecordScreen(
                 title = { Text("Autodict") },
                 actions = {
                     IconButton(onClick = onOpenList) {
-                        Icon(Icons.Default.List, contentDescription = "Vis dagbok")
+                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Vis dagbok")
                     }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Innstillingar")
