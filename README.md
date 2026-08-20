@@ -13,7 +13,8 @@ synkronisere via t.d. Dropbox, Google Drive eller Syncthing.
 
 ## Funksjonar (mål)
 
-- 🎙️ **Opptak** av tale (16 kHz mono), med opptak i bakgrunnen.
+- 🎙️ **Opptak** av tale (48 kHz mono for arkivet; nedsampla til 16 kHz for transkripsjon),
+  med opptak i bakgrunnen.
 - 🧠 **Offline transkripsjon** med [whisper.cpp](https://github.com/ggml-org/whisper.cpp) og
   **NB-Whisper** frå Nasjonalbiblioteket – finjustert på norsk (bokmål + nynorsk).
 - 📄 **Markdown per oppføring** med YAML-frontmatter (metadata) + lydfil ved sida.

@@ -6,19 +6,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.autodict.data.diary.createDiaryRepository
-import com.autodict.data.storage.AppSettings
-import com.autodict.data.transcribe.ModelDownloader
+import com.autodict.data.transcribe.TargetLanguage
+import com.autodict.data.transcribe.TranscriberHolder
 import com.autodict.data.transcribe.TranscriptMerge
 import com.autodict.data.transcribe.TranscriptionResult
-import com.autodict.data.transcribe.WhisperModel
-import com.autodict.data.transcribe.WhisperTranscriber
 import com.autodict.domain.model.DiaryEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.io.File
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
@@ -36,11 +32,7 @@ class EntryDetailViewModel(
 ) : AndroidViewModel(app) {
 
     private val repo = createDiaryRepository(app)
-    private val settings = AppSettings(app)
-    private val transcriber = WhisperTranscriber(
-        downloader = ModelDownloader(File(app.filesDir, "models")),
-        selectedModel = { WhisperModel.fromId(settings.whisperModelId.first()) },
-    )
+    private val transcriber = TranscriberHolder.acquire(app)
     private val entryId: String = handle.get<String>("entryId").orEmpty()
 
     private val _ui = MutableStateFlow(DetailUiState())
@@ -64,11 +56,13 @@ class EntryDetailViewModel(
      * Køyrer i [viewModelScope] – forlèt brukaren skjermen midt i, blir jobben avbroten.
      * Robust bakgrunnskøyring (foreground service / WorkManager) er sett til M10.
      */
-    fun transcribe() {
+    fun transcribe(language: TargetLanguage? = null) {
         val state = _ui.value
         val entry = state.entry ?: return
         val audioUri = state.audioUri ?: return
         if (state.transcribing) return
+
+        val target = language ?: TargetLanguage.fromCode(entry.language)
 
         viewModelScope.launch {
             _ui.value = _ui.value.copy(transcribing = true, message = "Transkriberer …")
@@ -79,7 +73,7 @@ class EntryDetailViewModel(
                 return@launch
             }
 
-            when (val result = transcriber.transcribe(bytes, entry.language)) {
+            when (val result = transcriber.transcribe(bytes, target.code)) {
                 is TranscriptionResult.Failure ->
                     _ui.value = _ui.value.copy(transcribing = false, message = result.message)
 
@@ -95,13 +89,17 @@ class EntryDetailViewModel(
                         body = TranscriptMerge.merge(entry.body, result.text, entry.transcribed),
                         transcribed = true,
                         model = result.modelId,
+                        language = target.code,
                         updated = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
                     )
                     val saved = repo.save(updated, null)
                     _ui.value = _ui.value.copy(
                         transcribing = false,
                         entry = if (saved) updated else entry,
-                        message = if (saved) "Transkribert." else "Transkriberte, men klarte ikkje lagre.",
+                        message = when {
+                            !saved -> "Transkriberte, men klarte ikkje lagre."
+                            else -> "Transkribert (${target.displayName.lowercase()})."
+                        },
                     )
                 }
             }
@@ -113,8 +111,8 @@ class EntryDetailViewModel(
     }
 
     override fun onCleared() {
-        // Whisper-modellen tek mykje minne – slepp han når skjermen er borte.
-        transcriber.release()
+        // Whisper-modellen tek mykje minne – slepp han når ingen skjerm brukar han lenger.
+        TranscriberHolder.release()
         super.onCleared()
     }
 }

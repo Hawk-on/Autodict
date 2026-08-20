@@ -12,6 +12,7 @@ import com.autodict.data.storage.StoragePaths
 import com.autodict.data.transcribe.DownloadStatus
 import com.autodict.data.transcribe.ModelDownloadSupport
 import com.autodict.data.transcribe.ModelDownloader
+import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.WhisperModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +34,8 @@ data class SettingsUiState(
     val wifiOnly: Boolean = true,
     val modelDownloaded: Boolean = false,
     val downloadFraction: Float? = null,
+    val language: TargetLanguage = TargetLanguage.DEFAULT,
+    val autoTranscribe: Boolean = false,
 )
 
 /**
@@ -72,6 +75,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 selectedModelId = id,
                 wifiOnly = settings.wifiOnlyDownload.first(),
                 modelDownloaded = downloader.isDownloaded(WhisperModel.fromId(id)),
+                language = TargetLanguage.fromCode(settings.transcriptionLanguage.first()),
+                autoTranscribe = settings.autoTranscribe.first(),
             )
         }
     }
@@ -108,6 +113,20 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             settings.setWifiOnlyDownload(enabled)
             _ui.value = _ui.value.copy(wifiOnly = enabled)
+        }
+    }
+
+    fun selectLanguage(language: TargetLanguage) {
+        viewModelScope.launch {
+            settings.setTranscriptionLanguage(language.code)
+            _ui.value = _ui.value.copy(language = language)
+        }
+    }
+
+    fun setAutoTranscribe(enabled: Boolean) {
+        viewModelScope.launch {
+            settings.setAutoTranscribe(enabled)
+            _ui.value = _ui.value.copy(autoTranscribe = enabled)
         }
     }
 

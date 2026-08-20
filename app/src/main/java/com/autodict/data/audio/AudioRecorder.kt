@@ -20,8 +20,15 @@ sealed interface RecorderState {
 }
 
 /**
- * Tek opp lyd med [AudioRecord] som rå 16 kHz mono 16-bit PCM, skrive direkte som WAV –
- * akkurat formatet whisper.cpp vil ha (M4), så ingen resampling seinare.
+ * Tek opp lyd med [AudioRecord] som rå mono 16-bit PCM, skrive direkte som WAV.
+ *
+ * **Samplingsrate:** vi tek opp i telefonen si native rate (48 kHz) i staden for whisper
+ * sine 16 kHz. Grunnen er arkivet: 16 kHz gir berre 8 kHz båndbredde, som gjer konsonantar
+ * (s/f/sj) matte – dagboka skal vere verdt å høyre på om mange år. [AudioResampler] tek
+ * lyden ned til 16 kHz når han skal transkriberast.
+ *
+ * **Bitdjupn:** 16-bit (96 dB dynamikk) er langt meir enn mikrofonen i ein telefon leverer
+ * (~65 dB SNR), så 24/32-bit ville berre gitt større filer utan hørbar gevinst.
  *
  * MVP: opptak i prosess på ein bakgrunnstråd. TODO (M10): flytt til ein foreground service
  * så opptak overlever skjerm av / app i bakgrunn (jf. designprinsipp i CLAUDE.md).
@@ -30,10 +37,13 @@ sealed interface RecorderState {
  */
 class AudioRecorder {
 
-    private val sampleRate = 16_000
+    /** Ratar vi prøver i tur og orden; første som eininga godtek blir brukt. */
+    private val preferredRates = intArrayOf(48_000, 44_100, AudioResampler.WHISPER_SAMPLE_RATE)
+
+    private var sampleRate = preferredRates.first()
     private val channels = 1
     private val bitsPerSample = 16
-    private val bytesPerSecond = sampleRate * channels * bitsPerSample / 8
+    private val bytesPerSecond get() = sampleRate * channels * bitsPerSample / 8
 
     private val _state = MutableStateFlow<RecorderState>(RecorderState.Idle)
     val state: StateFlow<RecorderState> = _state.asStateFlow()
@@ -48,24 +58,10 @@ class AudioRecorder {
     fun start(file: File): Boolean {
         if (running) return false
 
-        val minBuffer = AudioRecord.getMinBufferSize(
-            sampleRate,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-        )
-        val bufferSize = if (minBuffer > 0) minBuffer * 2 else bytesPerSecond
-
-        val recorder = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            sampleRate,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            bufferSize,
-        )
-        if (recorder.state != AudioRecord.STATE_INITIALIZED) {
-            recorder.release()
-            return false
-        }
+        val opened = openRecorder() ?: return false
+        val recorder = opened.recorder
+        val bufferSize = opened.bufferSize
+        sampleRate = opened.sampleRate
 
         val raf = RandomAccessFile(file, "rw").apply {
             setLength(0)
@@ -101,6 +97,45 @@ class AudioRecorder {
             }
         }.also { it.start() }
         return true
+    }
+
+    private class OpenedRecorder(
+        val recorder: AudioRecord,
+        val sampleRate: Int,
+        val bufferSize: Int,
+    )
+
+    /**
+     * Opnar [AudioRecord] på den beste raten eininga faktisk godtek. Ikkje alle telefonar
+     * støttar alle ratar, så vi fell tilbake i staden for å feile.
+     */
+    @SuppressLint("MissingPermission") // innringar sikrar RECORD_AUDIO
+    private fun openRecorder(): OpenedRecorder? {
+        for (rate in preferredRates) {
+            val minBuffer = AudioRecord.getMinBufferSize(
+                rate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+            )
+            if (minBuffer <= 0) continue
+
+            val bufferSize = minBuffer * 2
+            val recorder = runCatching {
+                AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    rate,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    bufferSize,
+                )
+            }.getOrNull() ?: continue
+
+            if (recorder.state == AudioRecord.STATE_INITIALIZED) {
+                return OpenedRecorder(recorder, rate, bufferSize)
+            }
+            recorder.release()
+        }
+        return null
     }
 
     /** Stoppar opptaket og returnerer resultatet, eller null om ingenting var i gang. */

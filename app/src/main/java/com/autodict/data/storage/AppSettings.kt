@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.WhisperModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -46,9 +47,30 @@ class AppSettings(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[WIFI_ONLY] = enabled }
     }
 
+    /**
+     * Målform transkripsjonen siktar mot for nye oppføringar. Modellen normaliserer talen
+     * (òg dialekt) mot denne målforma. Standard = bokmål, som har lågast feilrate.
+     */
+    val transcriptionLanguage: Flow<String> =
+        context.dataStore.data.map { prefs -> prefs[TRANSCRIPTION_LANGUAGE] ?: TargetLanguage.DEFAULT.code }
+
+    suspend fun setTranscriptionLanguage(code: String) {
+        context.dataStore.edit { prefs -> prefs[TRANSCRIPTION_LANGUAGE] = code }
+    }
+
+    /** Start transkripsjonen automatisk når eit opptak er ferdig (standard av). */
+    val autoTranscribe: Flow<Boolean> =
+        context.dataStore.data.map { prefs -> prefs[AUTO_TRANSCRIBE] ?: false }
+
+    suspend fun setAutoTranscribe(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[AUTO_TRANSCRIBE] = enabled }
+    }
+
     private companion object {
         val TREE_URI = stringPreferencesKey("tree_uri")
         val WHISPER_MODEL = stringPreferencesKey("whisper_model")
         val WIFI_ONLY = booleanPreferencesKey("wifi_only_download")
+        val TRANSCRIPTION_LANGUAGE = stringPreferencesKey("transcription_language")
+        val AUTO_TRANSCRIBE = booleanPreferencesKey("auto_transcribe")
     }
 }
