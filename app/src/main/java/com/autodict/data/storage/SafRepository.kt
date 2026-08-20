@@ -114,6 +114,13 @@ class SafRepository(
         }.getOrNull()
     }
 
+    /** Les ei fil som rå bytes (t.d. WAV til transkripsjon), eller null ved feil. */
+    suspend fun readFileBytes(uri: Uri): ByteArray? = withContext(Dispatchers.IO) {
+        runCatching {
+            resolver.openInputStream(uri)?.use { it.readBytes() }
+        }.getOrNull()
+    }
+
     /** Kopierer ei lokal fil (t.d. WAV frå cache) inn i mappa, og returnerer URI-en. */
     suspend fun copyFileInto(
         folders: List<String>,

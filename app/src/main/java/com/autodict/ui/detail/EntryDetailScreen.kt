@@ -5,16 +5,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -85,12 +89,38 @@ fun EntryDetailScreen(
                             Icon(Icons.Default.PlayArrow, contentDescription = null)
                             Text("  Spel av")
                         }
+
+                        // Offline transkripsjon (M4). Krev nedlasta NB-Whisper-modell.
+                        OutlinedButton(
+                            onClick = { viewModel.transcribe() },
+                            enabled = !ui.transcribing,
+                        ) {
+                            if (ui.transcribing) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                                Text("  Transkriberer …")
+                            } else {
+                                Text(if (entry.transcribed) "Transkriber på nytt" else "Transkriber")
+                            }
+                        }
                     }
+
+                    ui.message?.let { message ->
+                        Text(message, style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    HorizontalDivider()
 
                     Text(
                         text = entry.body.ifBlank { "(ingen tekst)" },
                         style = MaterialTheme.typography.bodyLarge,
                     )
+
+                    if (entry.transcribed && entry.model != null) {
+                        Text(
+                            "Transkribert med ${entry.model}",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
         }
