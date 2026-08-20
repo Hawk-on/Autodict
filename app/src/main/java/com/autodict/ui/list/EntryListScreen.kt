@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,15 +21,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autodict.domain.model.DiaryEntry
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 /** Listar dagbok-oppføringar lese frå mappa, nyaste først. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun EntryListScreen(
     onOpenEntry: (String) -> Unit,
@@ -60,14 +67,42 @@ fun EntryListScreen(
                 Modifier.padding(padding),
                 "Ingen oppføringar enno. Ta opp den fyrste!",
             )
-            else -> LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            ) {
-                items(ui.entries, key = { it.id }) { entry ->
-                    EntryRow(entry = entry, onClick = { onOpenEntry(entry.id) })
-                    HorizontalDivider()
+            else -> {
+                val groupedEntries = remember(ui.entries) {
+                    ui.entries.groupBy { entry ->
+                        try {
+                            val zdt = ZonedDateTime.parse(entry.created)
+                            val month = zdt.month.getDisplayName(TextStyle.FULL, Locale("no", "NO"))
+                            "${month.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }} ${zdt.year}"
+                        } catch (e: Exception) {
+                            "Ukjent dato"
+                        }
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                ) {
+                    groupedEntries.forEach { (monthYear, entries) ->
+                        stickyHeader(key = monthYear) {
+                            Text(
+                                text = monthYear,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+
+                        items(entries, key = { it.id }) { entry ->
+                            EntryRow(entry = entry, onClick = { onOpenEntry(entry.id) })
+                            HorizontalDivider()
+                        }
+                    }
                 }
             }
         }
@@ -88,8 +123,18 @@ private fun EntryRow(entry: DiaryEntry, onClick: () -> Unit) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+
+        val formattedTime = remember(entry.created) {
+            try {
+                val zdt = ZonedDateTime.parse(entry.created)
+                val formatter = DateTimeFormatter.ofPattern("d. MMM HH:mm", Locale("no", "NO"))
+                zdt.format(formatter)
+            } catch (e: Exception) {
+                entry.created
+            }
+        }
         Text(
-            text = entry.created,
+            text = formattedTime,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

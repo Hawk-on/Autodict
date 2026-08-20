@@ -11,6 +11,9 @@ import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.TranscriberHolder
 import com.autodict.data.transcribe.TranscriptMerge
 import com.autodict.data.transcribe.TranscriptionResult
+import com.autodict.data.actions.ActionType
+import com.autodict.data.actions.ExtractedAction
+import com.autodict.data.actions.RuleBasedExtractor
 import com.autodict.domain.model.DiaryEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +28,7 @@ data class DetailUiState(
     val audioUri: Uri? = null,
     val transcribing: Boolean = false,
     val message: String? = null,
+    val extractedActions: List<ExtractedAction> = emptyList(),
 )
 
 class EntryDetailViewModel(
@@ -34,6 +38,7 @@ class EntryDetailViewModel(
 
     private val repo = createDiaryRepository(app)
     private val transcriber = TranscriberHolder.acquire(app)
+    private val extractor = RuleBasedExtractor()
     private val entryId: String = handle.get<String>("entryId").orEmpty()
 
     private val _ui = MutableStateFlow(DetailUiState())
@@ -87,17 +92,26 @@ class EntryDetailViewModel(
                         )
                         return@launch
                     }
+                    val updatedBody = TranscriptMerge.merge(entry.body, result.text, entry.transcribed)
                     val updated = entry.copy(
-                        body = TranscriptMerge.merge(entry.body, result.text, entry.transcribed),
+                        body = updatedBody,
                         transcribed = true,
                         model = result.modelId,
                         language = target.code,
                         updated = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
                     )
                     val saved = repo.save(updated, null)
+
+                    val actions = if (saved) {
+                        extractor.extractActions(updated)
+                    } else {
+                        emptyList()
+                    }
+
                     _ui.value = _ui.value.copy(
                         transcribing = false,
                         entry = if (saved) updated else entry,
+                        extractedActions = actions,
                         message = when {
                             !saved -> "Transkriberte, men klarte ikkje lagre."
                             else -> "Transkribert (${target.displayName.lowercase()})."
@@ -110,6 +124,51 @@ class EntryDetailViewModel(
 
     fun dismissMessage() {
         _ui.value = _ui.value.copy(message = null)
+    }
+
+    fun dismissAction(action: ExtractedAction) {
+        _ui.value = _ui.value.copy(
+            extractedActions = _ui.value.extractedActions.filter { it != action }
+        )
+    }
+
+    fun approveAction(action: ExtractedAction) {
+        val state = _ui.value
+        val entry = state.entry ?: return
+
+        // Formater Markdown-teksten for handlingspunktet
+        val actionText = when (action.type) {
+            ActionType.CALENDAR_EVENT -> "- [ ] (Kalender) ${action.title}" + (action.time?.let { " - $it" } ?: "")
+            ActionType.TASK -> "- [ ] ${action.title}"
+        }
+
+        // Legg til under ## Handlingspunkt (opprett om det ikkje finst)
+        val bodyLines = entry.body.lines().toMutableList()
+        val actionsHeaderIndex = bodyLines.indexOfFirst { it.trim() == "## Handlingspunkt" }
+
+        if (actionsHeaderIndex >= 0) {
+            bodyLines.add(actionsHeaderIndex + 1, actionText)
+        } else {
+            if (bodyLines.lastOrNull()?.isNotBlank() == true) {
+                bodyLines.add("")
+            }
+            bodyLines.add("## Handlingspunkt")
+            bodyLines.add(actionText)
+        }
+
+        val updated = entry.copy(
+            body = bodyLines.joinToString("\n"),
+            updated = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        )
+
+        viewModelScope.launch {
+            if (repo.save(updated, null)) {
+                _ui.value = _ui.value.copy(
+                    entry = updated,
+                    extractedActions = _ui.value.extractedActions.filter { it != action }
+                )
+            }
+        }
     }
 
     override fun onCleared() {

@@ -16,7 +16,7 @@ data class RecordingResult(val file: File, val durationSeconds: Int)
 
 sealed interface RecorderState {
     data object Idle : RecorderState
-    data class Recording(val elapsedMs: Long) : RecorderState
+    data class Recording(val elapsedMs: Long, val amplitude: Float) : RecorderState
 }
 
 /**
@@ -73,7 +73,7 @@ class AudioRecorder {
         totalBytes.set(0)
         running = true
         recorder.startRecording()
-        _state.value = RecorderState.Recording(0)
+        _state.value = RecorderState.Recording(0, 0f)
 
         val startedAt = System.currentTimeMillis()
         thread = Thread {
@@ -84,7 +84,20 @@ class AudioRecorder {
                     if (read > 0) {
                         raf.write(buffer, 0, read)
                         totalBytes.addAndGet(read.toLong())
-                        _state.value = RecorderState.Recording(System.currentTimeMillis() - startedAt)
+
+                        // Calculate RMS amplitude for UI
+                        var sum = 0.0
+                        for (i in 0 until read step 2) {
+                            if (i + 1 < read) {
+                                val sample = (buffer[i].toInt() and 0xFF) or (buffer[i + 1].toInt() shl 8)
+                                val shortSample = sample.toShort().toDouble()
+                                sum += shortSample * shortSample
+                            }
+                        }
+                        val rms = if (read > 0) Math.sqrt(sum / (read / 2)) else 0.0
+                        val amplitude = (rms / Short.MAX_VALUE.toDouble()).toFloat().coerceIn(0f, 1f)
+
+                        _state.value = RecorderState.Recording(System.currentTimeMillis() - startedAt, amplitude)
                     }
                 }
             } finally {
