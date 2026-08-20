@@ -37,7 +37,7 @@ Detaljert plan: `/root/.claude/plans/eg-vil-lage-ein-witty-sonnet.md` (om tilgje
 app/src/main/java/com/autodict/
   AutodictApp.kt, MainActivity.kt
   data/storage/      # SAF: SafRepository, tree-URI i DataStore
-  data/audio/        # AudioRecorder (AudioRecord 16 kHz mono), WavWriter
+  data/audio/        # AudioRecorder (48 kHz mono), WavWriter/WavParser, AudioResampler
   data/transcribe/   # Transcriber-interface, WhisperEngine (JNI), ModelDownloader
   data/markdown/     # FrontmatterSerializer, EntryFileMapper
   data/index/        # lokal cache/indeks

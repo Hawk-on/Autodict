@@ -1,13 +1,11 @@
 package com.autodict.data.transcribe
 
+import com.autodict.data.audio.AudioResampler
 import com.autodict.data.audio.WavParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-
-/** Samplingsraten whisper krev; [com.autodict.data.audio.AudioRecorder] tek opp i denne raten. */
-private const val REQUIRED_SAMPLE_RATE = 16_000
 
 /**
  * Offline transkripsjon med whisper.cpp via [WhisperJni].
@@ -38,22 +36,19 @@ class WhisperTranscriber(
 
         val wav = WavParser.parse(wavBytes)
             ?: return TranscriptionResult.Failure("Klarte ikkje lese lydfila (ventar 16-bits PCM-WAV).")
-        if (wav.sampleRate != REQUIRED_SAMPLE_RATE) {
-            return TranscriptionResult.Failure(
-                "Lyden er ${wav.sampleRate} Hz, men transkripsjon krev $REQUIRED_SAMPLE_RATE Hz.",
-            )
-        }
         if (wav.samples.isEmpty()) {
             return TranscriptionResult.Failure("Lydfila er tom.")
         }
 
         return withContext(Dispatchers.Default) {
+            // Opptak skjer i 48 kHz for arkivet sin del; whisper vil ha 16 kHz.
+            val samples = AudioResampler.toWhisperRate(wav.samples, wav.sampleRate)
             mutex.withLock {
                 runCatching {
                     val ptr = ensureContext(model)
                     val text = WhisperJni.nativeTranscribe(
                         ptr,
-                        wav.samples,
+                        samples,
                         WhisperLanguage.forEntry(language),
                     )
                     TranscriptionResult.Success(text.trim(), model.frontmatterId)
