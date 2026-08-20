@@ -15,7 +15,8 @@ parentes). Mål: oppfylle attribusjonskrav og halde appen fri for utilsikta copy
 | whisper.cpp (ggml-org) | Transkripsjon (M4) | MIT | Nei | Behald MIT-varsel |
 | llama.cpp (ggml-org) | Lokal LLM (M8) | MIT | Nei | Behald MIT-varsel |
 | sherpa-onnx (k2-fsa) | Offline TTS-motor (M9) | Apache 2.0 | Nei | Behald varsel |
-| OkHttp / Retrofit (om brukt) | Nett (Tasks/Claude) | Apache 2.0 | Nei | Behald varsel |
+| OkHttp / Retrofit (om brukt) | Nett (Claude, framtidig opt-in) | Apache 2.0 | Nei | Behald varsel |
+| Guava (Google) | Direkte avhengnad, fiksar sårbarheiter i transitive bibliotek (M5) | Apache 2.0 | Nei | Behald varsel |
 
 ## Modellar
 

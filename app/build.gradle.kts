@@ -89,6 +89,9 @@ kotlin {
 }
 
 dependencies {
+    // Legg til nyare guava for å unngå sårbarheiter i transitive avhengnader
+    implementation(libs.guava)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)

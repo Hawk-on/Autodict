@@ -44,7 +44,7 @@ app/src/main/java/com/autodict/
   data/actions/      # ActionExtractor (RuleBased + LLM + Claude), NorwegianDateTimeParser
   data/llm/          # LlmEngine (llama.cpp/GGUF JNI), delt motor (M8)
   data/tts/          # SpeechSynthesizer (system/Piper/personleg stemme) (M9)
-  data/integration/  # CalendarIntentLauncher, GoogleTasksClient, ShareToKeep
+  data/integration/  # CalendarIntentLauncher, ShareToKeep (Keep + Google Tasks-gjeremål)
   domain/            # model/, repository/, usecase/
   ui/                # theme, navigation, record, list, detail, settings, actions
 app/src/main/cpp/    # whisper.cpp + (seinare) llama.cpp + JNI

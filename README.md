@@ -21,7 +21,8 @@ synkronisere via t.d. Dropbox, Google Drive eller Syncthing.
 - 📁 **Brukarvald lagringsmappe** via Storage Access Framework (SAF) – peik den mot ei
   sky-synka mappe etter eige ønske.
 - 🗓️ **Kalender:** opprett hendingar frå det du seier (opnar kalender-appen ferdig utfylt).
-- ✅ **Google Tasks:** opprett gjeremål automatisk; **del-til-Keep** for notat (eitt trykk).
+- ✅ **Gjeremål/Google Tasks:** del godkjende gjeremål vidare via systemet sitt delingspanel
+  (t.d. til ein oppgåve-app); **del-til-Keep** for notat (eitt trykk).
 - 🤖 **Assistent-uttrekk:** finn avtalar/gjeremål i transkriptet – tre nivå: regelbasert
   offline, lokal LLM (Borealis offline), eller Claude API (opt-in) for smartast tolking.
 - 🧩 **Lokal LLM-hjerne (offline):** ein liten norsk modell (NB-Llama-3.2 eller Borealis-open
@@ -139,9 +140,11 @@ med permissive avhengnader (MIT/Apache/BSD), men unngå å bundle inkompatible b
 - [x] **M3a** – Lokal indeks (JSON-cache + billig mtime-reconcile)
 - [x] **M3b** – Opus-arkiv (MediaCodec; minSdk 29)
 - [x] **M4** – Offline transkripsjon (whisper.cpp + NB-Whisper)
-- [ ] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender
-- [ ] **M6** – Google Tasks + del-til-Keep
-- [ ] **M7** – Claude API (opt-in)
+- [x] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender
+- [x] **M6** – Del gjeremål vidare via systemet sitt delingspanel (som del-til-Keep) + del-til-Keep
+- [ ] **M7** – Claude API (opt-in) og evt. Gemini (opt-in) – treng eigen auth-mekanisme
+      (t.d. API-nøkkel lagra trygt på eininga); ingen delt Google-auth å gjenbruke sidan M6
+      no er reindyrka delingsintent utan Google-konto/OAuth
 - [ ] **M8** – Lokal LLM-hjerne (NB-Llama/Borealis + llama.cpp): assistent + sammendrag dag/veke/månad
 - [ ] **M9** – Opplesing / TTS (Android system-TTS for norsk)
 - [ ] **M10** – Hurtigopptak-widget + polering
