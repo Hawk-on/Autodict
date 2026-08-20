@@ -4,62 +4,39 @@ Levande liste over kjende feil/oppgåver som treng vidare arbeid. Skriven slik a
 Claude/Copilot-økt (eller menneske) kan plukke opp arbeidet utan tidlegare kontekst – les
 `CLAUDE.md` først for prosjektoversikt og kjerneprinsipp.
 
-## 1. Transkripsjon fungerer ikkje (verken med eller utan auto-transkripsjon)
+## 1. ~~Transkripsjon fungerer ikkje~~ — LØYST (v0.4.0)
 
 **Rapportert av brukar:** transkribering skjer ikkje, korkje ved manuelt trykk på
 "Transkriber" eller via "Transkriber automatisk etter opptak"-innstillinga.
 
-**Status:** Ikkje løyst, men **diagnostikk er no på plass** (sjå under). To uavhengige
-kodegjennomgangar har ikkje funne nokon logikkfeil – og det er truleg ikkje tilfeldig:
-appen hadde **null logging** og svelgde kvar einaste feil, så ein køyretidsfeil kunne ikkje
-skilje seg frå «ingenting skjedde».
+**Status: LØYST.** Transkripsjonen fungerer i release-bygget (v0.4.0). Feilen låg ikkje i
+app-koden – brukaren hadde testa med **debug-APK-en frå CI**, som skil seg frå release på to
+måtar som begge gir nøyaktig dette symptomet:
 
-**Gjort (denne økta):**
-- `WhisperJni`: `System.loadLibrary` låg i eit `init`-blokk som kastar. Feila lastinga, vart
-  objektet permanent ubrukeleg og kvart seinare kall ga `NoClassDefFoundError` med **tom
-  melding**. No blir feilen fanga og eksponert som `WhisperJni.loadError`.
-- `WhisperTranscriber`: sjekkar native bibliotek først, loggar målform + samplingsrate +
-  modell, og feilmeldingar tek med klassenamnet (`error.message` er null for dei fleste
-  JNI-feil – difor «Transkripsjonen feila» utan meir).
-- `AudioLoader`: loggar kvifor dekodinga feila i staden for `catch (_: Exception) { null }`.
-- **Innstillingar → Diagnostikk → «Test transkripsjon»**: sjekkar native bibliotek, modellfil
-  (med storleik og full sti) og faktisk modell-lasting, og viser kva som feila.
+1. **Native kode bygd med `CMAKE_BUILD_TYPE=Debug`.** AGP gjer dette for debug-varianten, og
+   for whisper.cpp/ggml tyder det `-O0`: ingen SIMD, ingen inlining, og aktive `GGML_ASSERT`.
+   Inferens som tek sekund i release tek då fleire minutt og ser ut som om appen heng.
+2. **Ulik signatur enn release-APK-en.** Ein må avinstallere den andre først, og det slettar
+   appdata – inkludert den nedlasta modellen (181–514 MB) og alle innstillingar. Appen står
+   då att utan modell.
 
-**Neste steg for brukaren:** køyr sjølvtesten. Han skil hypotesane 1–2 frå kvarandre på eitt
-trykk, utan `adb`. Er alt «OK» der, ligg feilen i lyd-stien (hypotese 4) – då gir
-`adb logcat -s autodict-whisper autodict-audio` svaret.
+**Fiksa:** debug-varianten byggjer no native kode med `-DCMAKE_BUILD_TYPE=RelWithDebInfo`
+(`app/build.gradle.kts`), så debug-APK-en frå CI er brukande til å teste transkripsjon.
 
-**Filer undersøkt (ingen tydeleg feil funnen):**
-- `app/src/main/java/com/autodict/ui/detail/EntryDetailViewModel.kt` – `transcribe()`
-- `app/src/main/java/com/autodict/ui/record/RecordViewModel.kt` – auto-transkripsjon etter opptak
-- `app/src/main/java/com/autodict/data/transcribe/WhisperTranscriber.kt`
-- `app/src/main/java/com/autodict/data/transcribe/TranscriberHolder.kt`
-- `app/src/main/java/com/autodict/data/transcribe/ModelDownloader.kt`
-- `app/src/main/java/com/autodict/data/audio/AudioLoader.kt`
-- `app/src/main/cpp/whisper_jni.cpp` + `WhisperJni.kt` (JNI-bru)
+**Lærdom verdt å ta vare på:** ved testing av transkripsjon – bruk **release-APK-en frå
+Releases**. Byter du mellom debug og release, må modellen lastast ned på nytt.
 
-**Hypotesar å sjekke (i prioritert rekkjefølge):**
-1. **Modellen er ikkje lasta ned** – `ModelDownloader.isDownloaded()` kan gi feil svar, eller
-   nedlastinga kan ha feila stille. Sjekk `Innstillingar → Transkripsjonsmodell` – står det
-   "✓ Modell lasta ned", eller kjem det ei feilmelding?
-2. **Native lib (`.so`) manglar eller feilar ved lasting** – `WhisperJni` kan kaste
-   `UnsatisfiedLinkError` som ikkje blir fanga/vist til brukaren. Sjå `adb logcat` for
-   `System.loadLibrary`-feil eller JNI-crashar.
-3. **`ui.message`/feilmelding blir sett, men ikkje vist** – tilsvarande buggen som vart fiksa i
-   `SettingsScreen.kt` (sjå commit `ec1691b`, "Fiks: Google-konto-melding usynleg i
-   Innstillingar"): meldinga kan hamne utanfor synleg område i `EntryDetailScreen.kt`. Sjekk om
-   det står noko i `ui.message`-teksten på detaljskjermen (linje ca. 130 i
-   `EntryDetailScreen.kt`) når brukaren trykkjer "Transkriber", sjølv om ingenting synleg skjer.
-4. **Lydfila kan ikkje dekodast** – `AudioLoader.load()` returnerer `null` for enkelte format
-   (t.d. viss Opus-arkivering (M3b) og dekoding ikkje heng saman på denne eininga/Android-
-   versjonen). Sjå om meldinga "Klarte ikkje lese lydfila." dukkar opp.
+**Diagnostikk lagt til undervegs (behald – nyttig framover):**
+- `WhisperJni.loadError`/`isAvailable` – `System.loadLibrary` låg i eit `init`-blokk som
+  kastar; feila lastinga vart objektet permanent ubrukeleg og kvart kall ga
+  `NoClassDefFoundError` med tom melding.
+- `WhisperTranscriber` loggar modell, målform (før/etter mapping) og samplingsrate;
+  feilmeldingar tek med klassenamnet (`Throwable.message` er null for dei fleste JNI-feil).
+- `AudioLoader` loggar kvifor dekodinga feila.
+- **Innstillingar → Diagnostikk → "Test transkripsjon"** – sjekkar native bibliotek, modellfil
+  og modell-lasting utan `adb`.
 
-**Kva som trengst for å gå vidare:**
-- `adb logcat` frå augeblikket brukaren trykkjer "Transkriber" (helst med
-  `adb logcat | grep -i -E "whisper|autodict|AndroidRuntime"`).
-- Stadfesting av om det kjem NOKA melding på skjermen (t.d. "Transkriberer …", ei feilmelding,
-  eller ingenting i det heile).
-- Kva modell er vald i Innstillingar, og om han er nedlasta.
+Loggtaggar: `autodict-whisper`, `autodict-audio`.
 
 ## 2. Målform (språk) er alltid nynorsk, uavhengig av valet i Innstillingar
 

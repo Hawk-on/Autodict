@@ -45,6 +45,20 @@ android {
     }
 
     buildTypes {
+        debug {
+            // AGP byggjer normalt den native koden med CMAKE_BUILD_TYPE=Debug for
+            // debug-varianten. For whisper.cpp/ggml tyder det -O0: ingen SIMD, ingen
+            // inlining, og aktive GGML_ASSERT. Transkripsjon som tek sekund i release blir
+            // då fleire minutt, og ser ut som om appen heng. Sidan debug-APK-en frå CI er
+            // det naturlege å gripe til for testing, byggjer vi native med optimalisering
+            // (RelWithDebInfo beheld symbol for feilsøking).
+            externalNativeBuild {
+                cmake {
+                    arguments += "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+                }
+            }
+        }
+
         release {
             // R8 er MELLOMBELS AV. Utan minifisering blir APK-en ~52 MB (nesten alt er
             // ubrukte ikon frå material-icons-extended), så dette skal på att – men ikkje
