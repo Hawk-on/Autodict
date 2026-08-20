@@ -60,13 +60,12 @@ android {
         }
 
         release {
-            // R8 er MELLOMBELS AV. Utan minifisering blir APK-en ~52 MB (nesten alt er
-            // ubrukte ikon frå material-icons-extended), så dette skal på att – men ikkje
-            // medan vi feilsøkjer transkripsjonen (WORK_ITEMS.md). Minifisering kan berre
-            // verifiserast i køyretid, og ein R8-feil ville vore umogleg å skilje frå den
-            // bugen vi jaktar. Reglane ligg klare i proguard-rules.pro.
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // Utan R8 blir APK-en ~52 MB, og 47 av dei er DEX – nesten alt ubrukte ikon frå
+            // material-icons-extended. Sjå proguard-rules.pro: keep-regelen for WhisperJni er
+            // kritisk, sidan JNI-symbola er bygde av pakke+klasse+metode og renaming difor
+            // ville gitt UnsatisfiedLinkError først når ein faktisk transkriberer.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
