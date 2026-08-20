@@ -13,6 +13,7 @@ import com.autodict.data.transcribe.DownloadStatus
 import com.autodict.data.transcribe.ModelDownloadSupport
 import com.autodict.data.transcribe.ModelDownloader
 import com.autodict.data.transcribe.TargetLanguage
+import com.autodict.data.transcribe.WhisperJni
 import com.autodict.data.transcribe.WhisperModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +38,8 @@ data class SettingsUiState(
     val language: TargetLanguage = TargetLanguage.DEFAULT,
     val autoTranscribe: Boolean = false,
     val keepOriginalWav: Boolean = false,
+    /** Resultat frå sjølvtesten – null til brukaren har køyrt han. */
+    val diagnostics: String? = null,
 )
 
 /**
@@ -136,6 +139,55 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             settings.setKeepOriginalWav(enabled)
             _ui.value = _ui.value.copy(keepOriginalWav = enabled)
+        }
+    }
+
+    /**
+     * Sjølvtest for transkripsjon. Sjekkar dei tre tinga som kan svikte – native bibliotek,
+     * modellfil og modell-lasting – og seier kva som feila. Utan denne må ein ha `adb` for å
+     * finne ut kvifor "Transkriber" ikkje gjer noko.
+     */
+    fun runDiagnostics() {
+        viewModelScope.launch {
+            _ui.value = _ui.value.copy(diagnostics = "Testar …")
+            val model = WhisperModel.fromId(settings.whisperModelId.first())
+            val modelFile = downloader.modelFile(model)
+            val language = TargetLanguage.fromCode(settings.transcriptionLanguage.first())
+
+            val report = buildString {
+                appendLine("Målform: ${language.displayName} (${language.code})")
+                appendLine("Modell: ${model.displayName}")
+                append("Modellfil: ")
+                if (modelFile.exists()) {
+                    appendLine("OK, ${modelFile.length() / 1_000_000} MB")
+                } else {
+                    appendLine("MANGLAR (${modelFile.absolutePath})")
+                }
+
+                append("Native bibliotek: ")
+                val loadError = WhisperJni.loadError
+                if (loadError != null) {
+                    appendLine("FEIL – $loadError")
+                } else {
+                    appendLine("OK")
+                    appendLine("Backend: ${WhisperJni.systemInfoOrError().take(120)}")
+
+                    if (modelFile.exists()) {
+                        append("Lasting av modell: ")
+                        val ptr = runCatching { WhisperJni.nativeInit(modelFile.absolutePath) }
+                            .getOrElse { -1L }
+                        when (ptr) {
+                            -1L -> appendLine("KASTA UNNTAK")
+                            0L -> appendLine("FEILA (whisper_init returnerte null)")
+                            else -> {
+                                appendLine("OK")
+                                runCatching { WhisperJni.nativeFree(ptr) }
+                            }
+                        }
+                    }
+                }
+            }
+            _ui.value = _ui.value.copy(diagnostics = report.trim())
         }
     }
 

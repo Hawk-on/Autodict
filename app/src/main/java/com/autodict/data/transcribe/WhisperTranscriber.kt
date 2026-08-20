@@ -1,10 +1,13 @@
 package com.autodict.data.transcribe
 
+import android.util.Log
 import com.autodict.data.audio.AudioResampler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+
+private const val TAG = "autodict-whisper"
 
 /**
  * Offline transkripsjon med whisper.cpp via [WhisperJni].
@@ -30,8 +33,17 @@ class WhisperTranscriber(
         sampleRate: Int,
         language: String,
     ): TranscriptionResult {
+        // Sjekk det native biblioteket først – elles blir feilen berre eit tomt
+        // NoClassDefFoundError langt nede i stacken.
+        WhisperJni.loadError?.let { error ->
+            Log.e(TAG, "Native bibliotek utilgjengeleg: $error")
+            return TranscriptionResult.Failure("Native bibliotek kunne ikkje lastast ($error).")
+        }
+
         val model = selectedModel()
+        val modelFile = downloader.modelFile(model)
         if (!downloader.isDownloaded(model)) {
+            Log.w(TAG, "Modell manglar: ${modelFile.absolutePath} (finst=${modelFile.exists()}, storleik=${modelFile.length()})")
             return TranscriptionResult.Failure(
                 "Modellen «${model.displayName}» er ikkje lasta ned. Gå til Innstillingar.",
             )
@@ -43,18 +55,22 @@ class WhisperTranscriber(
         return withContext(Dispatchers.Default) {
             // Opptak skjer i 48 kHz for arkivet sin del; whisper vil ha 16 kHz.
             val forWhisper = AudioResampler.toWhisperRate(samples, sampleRate)
+            val whisperLanguage = WhisperLanguage.forEntry(language)
+            Log.i(
+                TAG,
+                "Transkriberer: modell=${model.id}, målform=$language -> $whisperLanguage, " +
+                    "${samples.size} sample @ ${sampleRate}Hz -> ${forWhisper.size} @ 16000Hz",
+            )
             mutex.withLock {
                 runCatching {
                     val ptr = ensureContext(model)
-                    val text = WhisperJni.nativeTranscribe(
-                        ptr,
-                        forWhisper,
-                        WhisperLanguage.forEntry(language),
-                    )
+                    val text = WhisperJni.nativeTranscribe(ptr, forWhisper, whisperLanguage)
+                    Log.i(TAG, "Ferdig: ${text.length} teikn")
                     TranscriptionResult.Success(text.trim(), model.frontmatterId)
                 }.getOrElse { error ->
+                    Log.e(TAG, "Transkripsjonen feila", error)
                     release()
-                    TranscriptionResult.Failure(error.message ?: "Transkripsjonen feila.")
+                    TranscriptionResult.Failure(describe(error))
                 }
             }
         }

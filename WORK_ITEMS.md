@@ -9,9 +9,25 @@ Claude/Copilot-økt (eller menneske) kan plukke opp arbeidet utan tidlegare kont
 **Rapportert av brukar:** transkribering skjer ikkje, korkje ved manuelt trykk på
 "Transkriber" eller via "Transkriber automatisk etter opptak"-innstillinga.
 
-**Status:** Ikkje løyst. Grundig kodegjennomgang er gjort utan å finne ein openbar logikkfeil –
-sjå detaljar under. Neste steg krev testing på ei ekte eining (emulator har typisk ikkje
-mikrofon/lyd), sidan miljøet her manglar Android SDK og kan ikkje køyre appen.
+**Status:** Ikkje løyst, men **diagnostikk er no på plass** (sjå under). To uavhengige
+kodegjennomgangar har ikkje funne nokon logikkfeil – og det er truleg ikkje tilfeldig:
+appen hadde **null logging** og svelgde kvar einaste feil, så ein køyretidsfeil kunne ikkje
+skilje seg frå «ingenting skjedde».
+
+**Gjort (denne økta):**
+- `WhisperJni`: `System.loadLibrary` låg i eit `init`-blokk som kastar. Feila lastinga, vart
+  objektet permanent ubrukeleg og kvart seinare kall ga `NoClassDefFoundError` med **tom
+  melding**. No blir feilen fanga og eksponert som `WhisperJni.loadError`.
+- `WhisperTranscriber`: sjekkar native bibliotek først, loggar målform + samplingsrate +
+  modell, og feilmeldingar tek med klassenamnet (`error.message` er null for dei fleste
+  JNI-feil – difor «Transkripsjonen feila» utan meir).
+- `AudioLoader`: loggar kvifor dekodinga feila i staden for `catch (_: Exception) { null }`.
+- **Innstillingar → Diagnostikk → «Test transkripsjon»**: sjekkar native bibliotek, modellfil
+  (med storleik og full sti) og faktisk modell-lasting, og viser kva som feila.
+
+**Neste steg for brukaren:** køyr sjølvtesten. Han skil hypotesane 1–2 frå kvarandre på eitt
+trykk, utan `adb`. Er alt «OK» der, ligg feilen i lyd-stien (hypotese 4) – då gir
+`adb logcat -s autodict-whisper autodict-audio` svaret.
 
 **Filer undersøkt (ingen tydeleg feil funnen):**
 - `app/src/main/java/com/autodict/ui/detail/EntryDetailViewModel.kt` – `transcribe()`
@@ -51,7 +67,21 @@ mikrofon/lyd), sidan miljøet her manglar Android SDK og kan ikkje køyre appen.
 vald i `Innstillingar → Transkripsjon`.
 
 **Status:** Ikkje løyst. Ingen kodefeil funnen ved gjennomgang – språkvalet ser ut til å bli
-lese/skrive/sendt korrekt gjennom heile kjeda.
+lese/skrive/sendt korrekt gjennom heile kjeda. `WhisperTranscriber` loggar no kva målform som
+faktisk går til whisper (`autodict-whisper`-taggen), og sjølvtesten viser kva som er vald – det
+avgjer om feilen er i appen eller i modellen sin oppførsel.
+
+**Viktig datapunkt frå tidlegare i prosjektet:** før målform-valet fanst (v0.2.0, `language`
+hardkoda til `"no"`, **medium**-modellen) rapporterte brukaren at striladialekt vart
+transkribert til **bokmål**. Same språkkode gir altså bokmål før og nynorsk no. Det peikar bort
+frå hypotese 2 (at modellen alltid normaliserer til nynorsk) og mot noko som har endra seg
+sidan: modellstorleik (**small** er standard no, medium vart testa då), eller `entry.language`
+som blir lese frå frontmatter i staden for innstillinga.
+
+**Merk òg:** detaljskjermen brukar med vilje `entry.language` (oppføringa si lagra målform),
+ikkje innstillinga. Endrar du innstillinga og re-transkriberer ei **gammal** oppføring, får du
+framleis den gamle målforma. Bruk «Som bokmål»-knappen for å tvinge den andre. Dette er
+forventa, men lett å oppfatte som ein bug.
 
 **Filer undersøkt (ingen tydeleg feil funnen):**
 - `app/src/main/java/com/autodict/data/transcribe/TargetLanguage.kt` – `"no"` (Bokmål) vs.

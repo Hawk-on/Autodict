@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -232,6 +233,27 @@ fun SettingsScreen(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text("Arkiver tapsfri WAV i staden", style = MaterialTheme.typography.bodyMedium)
+            }
+
+            HorizontalDivider()
+            Text("Diagnostikk", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Sjekkar native bibliotek, modellfil og modell-lasting – bruk denne når " +
+                    "«Transkriber» ikkje ser ut til å gjere noko.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(
+                onClick = { viewModel.runDiagnostics() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Test transkripsjon")
+            }
+            ui.diagnostics?.let { report ->
+                Text(
+                    report,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                )
             }
 
             HorizontalDivider()
