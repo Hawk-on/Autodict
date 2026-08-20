@@ -11,9 +11,24 @@ import kotlinx.coroutines.withContext
  */
 class RuleBasedExtractor : ActionExtractor {
 
-    // Nøkkelord for handlingar
-    private val CALENDAR_KEYWORDS = listOf("møte", "møte med", "avtale", "time hjå", "time hos", "hugs å møte", "husk å møte")
-    private val TASK_KEYWORDS = listOf("hugs å", "husk å", "må gjere", "må gjøre", "skal ringe", "må ringe")
+    // Nøkkelord for handlingar – lengste frasar først, elles blir spesifikke reglar uoppnåelege.
+    private val CALENDAR_KEYWORDS = listOf(
+        "hugs å møte",
+        "husk å møte",
+        "møte med",
+        "time hjå",
+        "time hos",
+        "avtale",
+        "møte",
+    )
+    private val TASK_KEYWORDS = listOf(
+        "må gjere",
+        "må gjøre",
+        "skal ringe",
+        "må ringe",
+        "hugs å",
+        "husk å",
+    )
 
     override suspend fun extractActions(entry: DiaryEntry): List<ExtractedAction> = withContext(Dispatchers.Default) {
         val actions = mutableListOf<ExtractedAction>()

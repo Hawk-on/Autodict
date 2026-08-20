@@ -47,10 +47,17 @@ class EntryDetailViewModel(
     init {
         viewModelScope.launch {
             val loaded = repo.get(entryId)
+            val entry = loaded?.entry
+            val actions = if (entry != null && entry.transcribed && entry.body.isNotBlank()) {
+                extractor.extractActions(entry).filterNot { isAlreadyRecorded(entry, it) }
+            } else {
+                emptyList()
+            }
             _ui.value = DetailUiState(
                 loading = false,
-                entry = loaded?.entry,
+                entry = entry,
                 audioUri = loaded?.audioUri,
+                extractedActions = actions,
             )
         }
     }
@@ -104,6 +111,7 @@ class EntryDetailViewModel(
 
                     val actions = if (saved) {
                         extractor.extractActions(updated)
+                            .filterNot { isAlreadyRecorded(updated, it) }
                     } else {
                         emptyList()
                     }
@@ -124,6 +132,10 @@ class EntryDetailViewModel(
 
     fun dismissMessage() {
         _ui.value = _ui.value.copy(message = null)
+    }
+
+    fun reportMessage(message: String) {
+        _ui.value = _ui.value.copy(message = message)
     }
 
     fun dismissAction(action: ExtractedAction) {
@@ -168,6 +180,23 @@ class EntryDetailViewModel(
                     extractedActions = _ui.value.extractedActions.filter { it != action }
                 )
             }
+        }
+    }
+
+    /**
+     * Hopp over forslag som allereie er lagra under ## Handlingspunkt
+     * (godkjende) – avviste forslag ligg ikkje i fila og kan kome att ved ny lasting.
+     */
+    private fun isAlreadyRecorded(entry: DiaryEntry, action: ExtractedAction): Boolean {
+        val section = entry.body
+            .lineSequence()
+            .dropWhile { it.trim() != "## Handlingspunkt" }
+            .drop(1)
+            .takeWhile { !it.trimStart().startsWith("## ") }
+            .toList()
+        if (section.isEmpty()) return false
+        return section.any { line ->
+            line.contains(action.title, ignoreCase = true)
         }
     }
 

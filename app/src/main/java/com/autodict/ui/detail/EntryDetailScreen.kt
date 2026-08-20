@@ -127,7 +127,11 @@ fun EntryDetailScreen(
                     }
 
                     ui.message?.let { message ->
-                        Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        Text(
+                            message,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
 
                     if (ui.extractedActions.isNotEmpty()) {
@@ -154,7 +158,15 @@ fun EntryDetailScreen(
                                         Button(onClick = {
                                             viewModel.approveAction(action)
                                             if (action.type == ActionType.CALENDAR_EVENT) {
-                                                CalendarIntentLauncher.launch(context, action.title, action.time, entry.body)
+                                                val launched = CalendarIntentLauncher.launch(
+                                                    context,
+                                                    action.title,
+                                                    action.time,
+                                                    entry.body,
+                                                )
+                                                if (!launched) {
+                                                    viewModel.reportMessage("Fann inga kalender-app på eininga.")
+                                                }
                                             }
                                         }) {
                                             Text(if (action.type == ActionType.CALENDAR_EVENT) "Legg til i kalender" else "Godkjenn oppgåve")

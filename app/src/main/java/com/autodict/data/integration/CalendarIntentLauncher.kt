@@ -10,7 +10,11 @@ import java.time.ZonedDateTime
  */
 object CalendarIntentLauncher {
 
-    fun launch(context: Context, title: String, timeIso: String?, body: String) {
+    /**
+     * Opnar kalender-appen med førehandsutfylt hending.
+     * @return true om intenten vart starta, false om ingen app handterer han.
+     */
+    fun launch(context: Context, title: String, timeIso: String?, body: String): Boolean {
         val intent = Intent(Intent.ACTION_INSERT)
             .setData(CalendarContract.Events.CONTENT_URI)
             .putExtra(CalendarContract.Events.TITLE, title)
@@ -28,6 +32,9 @@ object CalendarIntentLauncher {
         }
 
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        // Ekstern intent; feiler pent når eininga manglar kalender-app (som SettingsScreen).
+        return runCatching {
+            context.startActivity(intent)
+        }.isSuccess
     }
 }

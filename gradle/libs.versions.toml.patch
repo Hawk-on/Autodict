@@ -1,6 +1,0 @@
-<<<<<<< SEARCH
-composeBom = "2026.06.00"
-=======
-composeBom = "2026.06.00"
-# Updating compose-ui due to transitive vulnerabilities on older versions
->>>>>>> REPLACE
