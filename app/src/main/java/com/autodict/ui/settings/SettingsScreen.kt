@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.WhisperModel
 
 private const val SPONSORS_URL = "https://github.com/sponsors/Hawk-on"
@@ -173,6 +174,36 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Last ned modell") }
                 }
+            }
+
+            HorizontalDivider()
+            Text("Transkripsjon", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Målforma modellen skriv ut. Talen blir normalisert dit – snakkar du dialekt, " +
+                    "kjem teksten ut i valt målform. Bokmål har litt lågare feilrate enn nynorsk.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TargetLanguage.entries.forEach { language ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.selectLanguage(language) },
+                ) {
+                    RadioButton(
+                        selected = ui.language == language,
+                        onClick = { viewModel.selectLanguage(language) },
+                    )
+                    Text(language.displayName, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(
+                    checked = ui.autoTranscribe,
+                    onCheckedChange = { viewModel.setAutoTranscribe(it) },
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Transkriber automatisk etter opptak", style = MaterialTheme.typography.bodyMedium)
             }
 
             HorizontalDivider()

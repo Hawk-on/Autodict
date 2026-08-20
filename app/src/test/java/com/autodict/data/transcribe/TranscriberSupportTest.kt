@@ -27,6 +27,38 @@ class WhisperLanguageTest {
     }
 }
 
+class TargetLanguageTest {
+
+    @Test
+    fun resolvesCodesToLanguage() {
+        assertEquals(TargetLanguage.NYNORSK, TargetLanguage.fromCode("nn"))
+        assertEquals(TargetLanguage.BOKMAAL, TargetLanguage.fromCode("no"))
+        // Eldre oppføringar kan ha «nb» i frontmatter.
+        assertEquals(TargetLanguage.BOKMAAL, TargetLanguage.fromCode("nb"))
+    }
+
+    @Test
+    fun fallsBackToDefaultOnUnknownOrMissing() {
+        assertEquals(TargetLanguage.DEFAULT, TargetLanguage.fromCode(null))
+        assertEquals(TargetLanguage.DEFAULT, TargetLanguage.fromCode(""))
+        assertEquals(TargetLanguage.DEFAULT, TargetLanguage.fromCode("klingon"))
+    }
+
+    @Test
+    fun otherFlipsBetweenTargets() {
+        assertEquals(TargetLanguage.NYNORSK, TargetLanguage.BOKMAAL.other)
+        assertEquals(TargetLanguage.BOKMAAL, TargetLanguage.NYNORSK.other)
+    }
+
+    @Test
+    fun codesMapToWhisperLanguages() {
+        // Målforma må vere ein kode whisper faktisk kjenner igjen.
+        TargetLanguage.entries.forEach { language ->
+            assertEquals(language.code, WhisperLanguage.forEntry(language.code))
+        }
+    }
+}
+
 class TranscriptMergeTest {
 
     @Test

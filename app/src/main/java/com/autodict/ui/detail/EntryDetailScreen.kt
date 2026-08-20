@@ -1,8 +1,8 @@
 package com.autodict.ui.detail
 
-import android.media.MediaPlayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -10,8 +10,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -21,20 +19,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.autodict.data.transcribe.TargetLanguage
+import com.autodict.ui.common.AudioPlayerBar
+import com.autodict.ui.common.AudioSource
 
-/** Vis ei oppføring med tekst og avspeling av lyden. */
+/** Vis ei oppføring med tekst, avspeling og offline transkripsjon. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EntryDetailScreen(
@@ -42,12 +40,6 @@ fun EntryDetailScreen(
     viewModel: EntryDetailViewModel = viewModel(),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-
-    var player by remember { mutableStateOf<MediaPlayer?>(null) }
-    DisposableEffect(Unit) {
-        onDispose { player?.release(); player = null }
-    }
 
     Scaffold(
         topBar = {
@@ -77,29 +69,31 @@ fun EntryDetailScreen(
                     Text(entry.created, style = MaterialTheme.typography.bodySmall)
 
                     ui.audioUri?.let { uri ->
-                        Button(onClick = {
-                            player?.release()
-                            player = MediaPlayer().apply {
-                                setOnCompletionListener { mp -> mp.release(); player = null }
-                                setDataSource(context, uri)
-                                prepare()
-                                start()
-                            }
-                        }) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
-                            Text("  Spel av")
-                        }
+                        AudioPlayerBar(AudioSource.Content(uri))
 
-                        // Offline transkripsjon (M4). Krev nedlasta NB-Whisper-modell.
-                        OutlinedButton(
-                            onClick = { viewModel.transcribe() },
-                            enabled = !ui.transcribing,
+                        val current = TargetLanguage.fromCode(entry.language)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            if (ui.transcribing) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                                Text("  Transkriberer …")
-                            } else {
-                                Text(if (entry.transcribed) "Transkriber på nytt" else "Transkriber")
+                            OutlinedButton(
+                                onClick = { viewModel.transcribe() },
+                                enabled = !ui.transcribing,
+                            ) {
+                                if (ui.transcribing) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                                    Text("  Transkriberer …")
+                                } else {
+                                    Text(if (entry.transcribed) "Transkriber på nytt" else "Transkriber")
+                                }
+                            }
+
+                            // Same lyd, andre målforma – NB-Whisper normaliserer talen dit.
+                            TextButton(
+                                onClick = { viewModel.transcribe(current.other) },
+                                enabled = !ui.transcribing,
+                            ) {
+                                Text("Som ${current.other.displayName.lowercase()}")
                             }
                         }
                     }
@@ -117,7 +111,8 @@ fun EntryDetailScreen(
 
                     if (entry.transcribed && entry.model != null) {
                         Text(
-                            "Transkribert med ${entry.model}",
+                            "Transkribert med ${entry.model} " +
+                                "(${TargetLanguage.fromCode(entry.language).displayName.lowercase()})",
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }

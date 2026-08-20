@@ -5,11 +5,17 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.autodict.data.diary.createDiaryRepository
+import com.autodict.data.storage.AppSettings
 import com.autodict.data.storage.StoragePaths
+import com.autodict.data.transcribe.TargetLanguage
+import com.autodict.data.transcribe.TranscriberHolder
+import com.autodict.data.transcribe.TranscriptMerge
+import com.autodict.data.transcribe.TranscriptionResult
 import com.autodict.domain.model.DiaryEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -23,11 +29,20 @@ data class EditUiState(
     val body: String = "",
     val saving: Boolean = false,
     val error: String? = null,
+    val audioPath: String? = null,
+    val language: TargetLanguage = TargetLanguage.DEFAULT,
+    val transcribing: Boolean = false,
+    val message: String? = null,
+    /** Modell-id når teksten kjem frå transkripsjon – går i frontmatter ved lagring. */
+    val transcribedModel: String? = null,
 )
 
 /**
  * Redigerer eit nytt utkast (frå opptak) og lagrar det som ei oppføring.
  * Argumenta (audio-sti, opptakstid, lengd) kjem frå navigasjonen via [SavedStateHandle].
+ *
+ * Frå M4d kan utkastet transkriberast **før** lagring, slik at du ser og kan rette teksten
+ * med ein gong – i staden for å måtte lagre, opne oppføringa og transkribere der.
  */
 class EntryEditViewModel(
     app: Application,
@@ -35,16 +50,71 @@ class EntryEditViewModel(
 ) : AndroidViewModel(app) {
 
     private val repo = createDiaryRepository(app)
+    private val settings = AppSettings(app)
+    private val transcriber = TranscriberHolder.acquire(app)
 
     private val audioPath: String? = handle.get<String>("audio")?.takeIf { it.isNotBlank() }
     private val createdMillis: Long = handle.get<String>("created")?.toLongOrNull() ?: System.currentTimeMillis()
     private val durationSeconds: Int = handle.get<String>("duration")?.toIntOrNull() ?: 0
 
-    private val _ui = MutableStateFlow(EditUiState())
+    private val _ui = MutableStateFlow(EditUiState(audioPath = audioPath))
     val ui: StateFlow<EditUiState> = _ui.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val language = TargetLanguage.fromCode(settings.transcriptionLanguage.first())
+            _ui.update { it.copy(language = language) }
+            if (audioPath != null && settings.autoTranscribe.first()) {
+                transcribe()
+            }
+        }
+    }
 
     fun onTitleChange(value: String) = _ui.update { it.copy(title = value) }
     fun onBodyChange(value: String) = _ui.update { it.copy(body = value) }
+
+    fun onLanguageChange(language: TargetLanguage) = _ui.update { it.copy(language = language) }
+
+    fun dismissMessage() = _ui.update { it.copy(message = null) }
+
+    /** Transkriberer cache-WAV-en og legg teksten i tekstfeltet, klar til retting. */
+    fun transcribe() {
+        val path = audioPath ?: return
+        if (_ui.value.transcribing) return
+
+        viewModelScope.launch {
+            _ui.update { it.copy(transcribing = true, message = "Transkriberer …") }
+
+            val bytes = runCatching { File(path).readBytes() }.getOrNull()
+            if (bytes == null) {
+                _ui.update { it.copy(transcribing = false, message = "Fann ikkje opptaket.") }
+                return@launch
+            }
+
+            when (val result = transcriber.transcribe(bytes, _ui.value.language.code)) {
+                is TranscriptionResult.Failure ->
+                    _ui.update { it.copy(transcribing = false, message = result.message) }
+
+                is TranscriptionResult.Success -> _ui.update { state ->
+                    if (result.text.isBlank()) {
+                        state.copy(transcribing = false, message = "Fann ingen tale i opptaket.")
+                    } else {
+                        state.copy(
+                            transcribing = false,
+                            // Ny transkripsjon erstattar førre, men lèt manuell tekst stå.
+                            body = TranscriptMerge.merge(
+                                body = state.body,
+                                transcript = result.text,
+                                alreadyTranscribed = state.transcribedModel != null,
+                            ),
+                            transcribedModel = result.modelId,
+                            message = "Transkribert (${state.language.displayName.lowercase()}).",
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     fun save(onSaved: () -> Unit) {
         if (_ui.value.saving) return
@@ -53,7 +123,8 @@ class EntryEditViewModel(
             val zone = ZoneId.systemDefault()
             val instant = Instant.ofEpochMilli(createdMillis)
             val localDateTime = instant.atZone(zone).toLocalDateTime()
-            val title = _ui.value.title.trim()
+            val state = _ui.value
+            val title = state.title.trim()
 
             val id = StoragePaths.entrySlug(localDateTime, title.ifBlank { null })
             val createdIso = OffsetDateTime.ofInstant(instant, zone)
@@ -65,10 +136,11 @@ class EntryEditViewModel(
                 title = title.ifBlank { "Utan tittel" },
                 audio = if (audioPath != null) "$id.wav" else null,
                 durationSeconds = durationSeconds,
-                language = "no",
-                transcribed = false,
+                language = state.language.code,
+                transcribed = state.transcribedModel != null,
+                model = state.transcribedModel,
                 tags = emptyList(),
-                body = _ui.value.body.trim(),
+                body = state.body.trim(),
             )
 
             val ok = repo.save(entry, audioPath?.let(::File))
@@ -84,5 +156,10 @@ class EntryEditViewModel(
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        TranscriberHolder.release()
+        super.onCleared()
     }
 }
