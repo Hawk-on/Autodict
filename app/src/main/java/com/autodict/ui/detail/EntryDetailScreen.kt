@@ -38,6 +38,7 @@ import com.autodict.ui.common.AudioPlayerBar
 import com.autodict.ui.common.AudioSource
 import com.autodict.data.actions.ActionType
 import com.autodict.data.integration.CalendarIntentLauncher
+import com.autodict.data.integration.ShareToKeep
 
 /** Vis ei oppføring med tekst, avspeling og offline transkripsjon. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -167,9 +168,21 @@ fun EntryDetailScreen(
                                                 if (!launched) {
                                                     viewModel.reportMessage("Fann inga kalender-app på eininga.")
                                                 }
+                                            } else {
+                                                // Google Tasks har ingen del-mottakar; brukaren vel sjølv
+                                                // kvar gjeremålet skal (t.d. ein oppgåve-app) i del-arket.
+                                                val shared = ShareToKeep.share(
+                                                    context,
+                                                    action.title,
+                                                    action.time?.let { "${action.title}\n\n$it" } ?: action.title,
+                                                    chooserTitle = "Del gjeremål",
+                                                )
+                                                if (!shared) {
+                                                    viewModel.reportMessage("Fann ingen app å dele gjeremålet til.")
+                                                }
                                             }
                                         }) {
-                                            Text(if (action.type == ActionType.CALENDAR_EVENT) "Legg til i kalender" else "Godkjenn oppgåve")
+                                            Text(if (action.type == ActionType.CALENDAR_EVENT) "Legg til i kalender" else "Del gjeremål")
                                         }
                                     }
                                 }
@@ -198,6 +211,20 @@ fun EntryDetailScreen(
                                 "(${TargetLanguage.fromCode(entry.language).displayName.lowercase()})",
                             style = MaterialTheme.typography.bodySmall,
                         )
+                    }
+
+                    if (entry.body.isNotBlank()) {
+                        OutlinedButton(
+                            onClick = {
+                                val shared = ShareToKeep.share(context, entry.title.ifBlank { "Autodict" }, entry.body)
+                                if (!shared) {
+                                    viewModel.reportMessage("Fann ingen app å dele til.")
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Del til Keep")
+                        }
                     }
                 }
             }
