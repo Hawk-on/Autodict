@@ -77,6 +77,23 @@ class WavParserTest {
     }
 
     @Test
+    fun readFormatFindsLayoutFromHeaderPrefixOnly() {
+        // OpusEncoder les berre starten av fila og strøymer resten – formatet må difor
+        // kunne lesast utan at heile opptaket er tilgjengeleg.
+        val full = wav(ShortArray(5_000) { 1000 }, sampleRate = 48_000)
+        val prefix = full.copyOfRange(0, 1024)
+
+        val format = WavParser.readFormat(prefix)
+
+        assertNotNull(format)
+        assertEquals(48_000, format!!.sampleRate)
+        assertEquals(1, format.channels)
+        assertEquals(16, format.bitsPerSample)
+        assertEquals(44, format.dataOffset)
+        assertEquals(10_000, format.declaredDataSize)
+    }
+
+    @Test
     fun rejectsNonWavData() {
         assertNull(WavParser.parse(ByteArray(100)))
         assertNull(WavParser.parse("ikkje ei wav-fil".toByteArray()))

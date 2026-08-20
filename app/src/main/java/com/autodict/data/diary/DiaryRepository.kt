@@ -102,14 +102,18 @@ class DiaryRepository(
         val markdown = FrontmatterSerializer.serialize(entry)
         saf.writeTextFile(folders, "${entry.id}.md", "text/markdown", markdown) ?: return false
         if (audioFile != null && entry.audio != null) {
-            saf.copyFileInto(folders, entry.audio, "audio/wav", audioFile) ?: return false
+            saf.copyFileInto(folders, entry.audio, audioMimeType(entry.audio), audioFile) ?: return false
         }
         sync()
         return true
     }
 
-    /** Les lydfila som rå bytes – brukt av transkripsjonen (M4). */
-    suspend fun readAudioBytes(uri: Uri): ByteArray? = saf.readFileBytes(uri)
+    /** MIME-type ut frå filendinga – dagboka kan innehalde både WAV og Opus (M3b). */
+    private fun audioMimeType(fileName: String): String = when {
+        fileName.endsWith(".opus", ignoreCase = true) -> "audio/opus"
+        fileName.endsWith(".ogg", ignoreCase = true) -> "audio/ogg"
+        else -> "audio/wav"
+    }
 
     /** Hentar ei enkelt oppføring med id, inkludert URI til lydfila. */
     suspend fun get(id: String): LoadedEntry? {

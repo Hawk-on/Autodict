@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.autodict.data.audio.AudioLoader
 import com.autodict.data.diary.createDiaryRepository
 import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.TranscriberHolder
@@ -67,13 +68,14 @@ class EntryDetailViewModel(
         viewModelScope.launch {
             _ui.value = _ui.value.copy(transcribing = true, message = "Transkriberer …")
 
-            val bytes = repo.readAudioBytes(audioUri)
-            if (bytes == null) {
-                _ui.value = _ui.value.copy(transcribing = false, message = "Fann ikkje lydfila.")
+            // Arkivet kan vere Opus (M3b) – AudioLoader dekodar det formatet fila har.
+            val audio = AudioLoader.load(getApplication(), audioUri)
+            if (audio == null) {
+                _ui.value = _ui.value.copy(transcribing = false, message = "Klarte ikkje lese lydfila.")
                 return@launch
             }
 
-            when (val result = transcriber.transcribe(bytes, target.code)) {
+            when (val result = transcriber.transcribe(audio.samples, audio.sampleRate, target.code)) {
                 is TranscriptionResult.Failure ->
                     _ui.value = _ui.value.copy(transcribing = false, message = result.message)
 

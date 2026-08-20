@@ -3,8 +3,20 @@ package com.autodict.data.audio
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/** Ferdig dekoda WAV: mono float-samples i [-1, 1] + samplingsrate. */
+/** Ferdig dekoda lyd: mono float-samples i [-1, 1] + samplingsrate. */
 class ParsedWav(val samples: FloatArray, val sampleRate: Int)
+
+/**
+ * Formatet til ei WAV-fil og kvar PCM-dataen ligg. Lèt [OpusEncoder] strøyme store filer
+ * utan å laste heile opptaket i minnet.
+ */
+data class WavFormat(
+    val sampleRate: Int,
+    val channels: Int,
+    val bitsPerSample: Int,
+    val dataOffset: Int,
+    val declaredDataSize: Int,
+)
 
 /**
  * Les ei PCM-WAV-fil til mono float-samples – formatet whisper.cpp krev.
@@ -20,8 +32,12 @@ object WavParser {
     private const val BYTES_PER_SAMPLE = BITS_PER_SAMPLE / 8
     private const val FULL_SCALE = 32_768f
 
-    /** Returnerer null om dette ikkje er ei lesbar 16-bits PCM-WAV-fil. */
-    fun parse(bytes: ByteArray): ParsedWav? {
+    /**
+     * Les format og posisjonen til PCM-dataen. Fungerer på ein *prefiks* av fila (chunk-
+     * hovuda ligg alltid før innhaldet), så store opptak kan strøymast i staden for å
+     * lastast heilt inn.
+     */
+    fun readFormat(bytes: ByteArray): WavFormat? {
         if (bytes.size < 44) return null
         if (tagAt(bytes, 0) != "RIFF" || tagAt(bytes, 8) != "WAVE") return null
 
@@ -31,14 +47,14 @@ object WavParser {
         var sampleRate = 0
         var bitsPerSample = 0
         var dataOffset = -1
-        var dataSize = 0
+        var declaredDataSize = 0
 
         var pos = 12
         while (pos + 8 <= bytes.size) {
             val id = tagAt(bytes, pos)
             val size = buffer.getInt(pos + 4)
             val body = pos + 8
-            if (size < 0 || body > bytes.size) return null
+            if (size < 0 || body > bytes.size) break
 
             when (id) {
                 "fmt " -> {
@@ -51,10 +67,10 @@ object WavParser {
 
                 "data" -> {
                     dataOffset = body
-                    // Toler at storleiken i headeren er større enn fila (avbrote opptak).
-                    dataSize = minOf(size, bytes.size - body)
+                    declaredDataSize = size
                 }
             }
+            if (dataOffset >= 0) break // alt vi treng er funne
             // RIFF-chunkar er padda til partal lengd.
             pos = body + size + (size and 1)
         }
@@ -62,8 +78,21 @@ object WavParser {
         if (format != WavWriter.PCM_FORMAT) return null
         if (bitsPerSample != BITS_PER_SAMPLE) return null
         if (channels < 1 || sampleRate <= 0) return null
-        if (dataOffset < 0 || dataSize <= 0) return null
+        if (dataOffset < 0) return null
+        return WavFormat(sampleRate, channels, bitsPerSample, dataOffset, declaredDataSize)
+    }
 
+    /** Returnerer null om dette ikkje er ei lesbar 16-bits PCM-WAV-fil. */
+    fun parse(bytes: ByteArray): ParsedWav? {
+        val info = readFormat(bytes) ?: return null
+        val channels = info.channels
+        val sampleRate = info.sampleRate
+        val dataOffset = info.dataOffset
+        // Toler at storleiken i headeren er større enn fila (avbrote opptak).
+        val dataSize = minOf(info.declaredDataSize, bytes.size - dataOffset)
+        if (dataSize <= 0) return null
+
+        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
         val frameBytes = BYTES_PER_SAMPLE * channels
         val frames = dataSize / frameBytes
         val samples = FloatArray(frames)
