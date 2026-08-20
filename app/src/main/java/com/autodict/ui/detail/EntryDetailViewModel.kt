@@ -1,12 +1,19 @@
 package com.autodict.ui.detail
 
+import android.app.Activity
 import android.app.Application
+import android.content.Intent
 import android.net.Uri
+import androidx.activity.result.IntentSenderRequest
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.autodict.data.audio.AudioLoader
 import com.autodict.data.diary.createDiaryRepository
+import com.autodict.data.integration.GooglePlayServicesTasksClient
+import com.autodict.data.integration.GoogleTasksAuthResult
+import com.autodict.data.integration.GoogleTasksClient
+import com.autodict.data.storage.AppSettings
 import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.TranscriberHolder
 import com.autodict.data.transcribe.TranscriptMerge
@@ -18,6 +25,7 @@ import com.autodict.domain.model.DiaryEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -29,6 +37,7 @@ data class DetailUiState(
     val transcribing: Boolean = false,
     val message: String? = null,
     val extractedActions: List<ExtractedAction> = emptyList(),
+    val pendingGoogleTaskConsent: IntentSenderRequest? = null,
 )
 
 class EntryDetailViewModel(
@@ -39,7 +48,12 @@ class EntryDetailViewModel(
     private val repo = createDiaryRepository(app)
     private val transcriber = TranscriberHolder.acquire(app)
     private val extractor = RuleBasedExtractor()
+    private val settings = AppSettings(app)
+    private val tasksClient: GoogleTasksClient = GooglePlayServicesTasksClient(app)
     private val entryId: String = handle.get<String>("entryId").orEmpty()
+
+    /** Handlinga som ventar på samtykke-svar frå [pendingGoogleTaskConsent]. Ikkje UI-state. */
+    private var pendingGoogleTaskAction: ExtractedAction? = null
 
     private val _ui = MutableStateFlow(DetailUiState())
     val ui: StateFlow<DetailUiState> = _ui.asStateFlow()
@@ -181,6 +195,62 @@ class EntryDetailViewModel(
                 )
             }
         }
+    }
+
+    /**
+     * Send eit godkjend gjeremål (`ActionType.TASK`) vidare til Google Tasks, om brukaren har
+     * slått funksjonen på (opt-in, sjå `AppSettings.googleTasksEnabled`). Kallast berre etter
+     * eksplisitt godkjenning frå brukaren (kjerneprinsipp 5 i CLAUDE.md). Feilar penst utan nett
+     * eller samtykke (kjerneprinsipp 4).
+     */
+    fun createGoogleTask(action: ExtractedAction) {
+        viewModelScope.launch {
+            if (!settings.googleTasksEnabled.first()) return@launch
+            pendingGoogleTaskAction = action
+            when (val result = tasksClient.authorize()) {
+                is GoogleTasksAuthResult.Authorized -> submitGoogleTask(result.accessToken, action)
+                is GoogleTasksAuthResult.ConsentRequired ->
+                    _ui.value = _ui.value.copy(pendingGoogleTaskConsent = result.intentSenderRequest)
+                is GoogleTasksAuthResult.Failure -> {
+                    pendingGoogleTaskAction = null
+                    _ui.value = _ui.value.copy(message = "Google Tasks: ${result.message}")
+                }
+            }
+        }
+    }
+
+    /** Kallast frå skjermen etter at brukaren har svart på samtykke-arket for Google Tasks. */
+    fun onGoogleTaskConsentResult(resultCode: Int, data: Intent?) {
+        val action = pendingGoogleTaskAction
+        _ui.value = _ui.value.copy(pendingGoogleTaskConsent = null)
+        if (action == null || data == null || resultCode != Activity.RESULT_OK) {
+            pendingGoogleTaskAction = null
+            _ui.value = _ui.value.copy(message = "Google Tasks: samtykke vart avbrote.")
+            return
+        }
+        viewModelScope.launch {
+            when (val result = tasksClient.authorizeFromConsent(data)) {
+                is GoogleTasksAuthResult.Authorized -> submitGoogleTask(result.accessToken, action)
+                is GoogleTasksAuthResult.ConsentRequired ->
+                    _ui.value = _ui.value.copy(pendingGoogleTaskConsent = result.intentSenderRequest)
+                is GoogleTasksAuthResult.Failure -> {
+                    pendingGoogleTaskAction = null
+                    _ui.value = _ui.value.copy(message = "Google Tasks: ${result.message}")
+                }
+            }
+        }
+    }
+
+    private suspend fun submitGoogleTask(accessToken: String, action: ExtractedAction) {
+        val result = tasksClient.createTask(accessToken, action.title, notes = null, dueIso = action.time)
+        pendingGoogleTaskAction = null
+        _ui.value = _ui.value.copy(
+            message = if (result.isSuccess) {
+                "Lagt til i Google Tasks."
+            } else {
+                "Google Tasks feila: ${result.exceptionOrNull()?.message}"
+            },
+        )
     }
 
     /**

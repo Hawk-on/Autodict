@@ -77,6 +77,32 @@ class AppSettings(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[KEEP_WAV] = enabled }
     }
 
+    /**
+     * Opt-in (M6): opprett godkjende gjeremål (`ActionType.TASK`) i Google Tasks via
+     * [com.autodict.data.integration.GoogleTasksClient]. Av som standard – appen skal fungere
+     * heilt offline utan denne (kjerneprinsipp 4 i CLAUDE.md).
+     */
+    val googleTasksEnabled: Flow<Boolean> =
+        context.dataStore.data.map { prefs -> prefs[GOOGLE_TASKS_ENABLED] ?: false }
+
+    suspend fun setGoogleTasksEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[GOOGLE_TASKS_ENABLED] = enabled }
+    }
+
+    /**
+     * Konto-ID/e-post for kopla Google-konto (M6), berre til visning i innstillingar. Ikkje ei
+     * hemmelegheit (offentleg kontoidentifikator), difor vanleg DataStore og ikkje kryptert
+     * lagring.
+     */
+    val googleAccountEmail: Flow<String?> =
+        context.dataStore.data.map { prefs -> prefs[GOOGLE_ACCOUNT_EMAIL] }
+
+    suspend fun setGoogleAccountEmail(email: String?) {
+        context.dataStore.edit { prefs ->
+            if (email == null) prefs.remove(GOOGLE_ACCOUNT_EMAIL) else prefs[GOOGLE_ACCOUNT_EMAIL] = email
+        }
+    }
+
     private companion object {
         val TREE_URI = stringPreferencesKey("tree_uri")
         val KEEP_WAV = booleanPreferencesKey("keep_original_wav")
@@ -84,5 +110,7 @@ class AppSettings(private val context: Context) {
         val WIFI_ONLY = booleanPreferencesKey("wifi_only_download")
         val TRANSCRIPTION_LANGUAGE = stringPreferencesKey("transcription_language")
         val AUTO_TRANSCRIBE = booleanPreferencesKey("auto_transcribe")
+        val GOOGLE_TASKS_ENABLED = booleanPreferencesKey("google_tasks_enabled")
+        val GOOGLE_ACCOUNT_EMAIL = stringPreferencesKey("google_account_email")
     }
 }

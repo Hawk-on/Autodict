@@ -140,8 +140,10 @@ med permissive avhengnader (MIT/Apache/BSD), men unngå å bundle inkompatible b
 - [x] **M3b** – Opus-arkiv (MediaCodec; minSdk 29)
 - [x] **M4** – Offline transkripsjon (whisper.cpp + NB-Whisper)
 - [x] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender
-- [ ] **M6** – Google Tasks + del-til-Keep
-- [ ] **M7** – Claude API (opt-in)
+- [x] **M6** – Google Tasks + del-til-Keep
+- [ ] **M7** – Claude API (opt-in) og evt. Gemini (opt-in) – kan gjenbruke Play Services
+      Authorization API frå M6 (`GoogleTasksClient`) med utvida scope (`generative-language`
+      eller `cloud-platform`) i staden for eigen OAuth-klient
 - [ ] **M8** – Lokal LLM-hjerne (NB-Llama/Borealis + llama.cpp): assistent + sammendrag dag/veke/månad
 - [ ] **M9** – Opplesing / TTS (Android system-TTS for norsk)
 - [ ] **M10** – Hurtigopptak-widget + polering

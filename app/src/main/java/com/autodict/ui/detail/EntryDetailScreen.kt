@@ -1,5 +1,7 @@
 package com.autodict.ui.detail
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
@@ -38,6 +41,7 @@ import com.autodict.ui.common.AudioPlayerBar
 import com.autodict.ui.common.AudioSource
 import com.autodict.data.actions.ActionType
 import com.autodict.data.integration.CalendarIntentLauncher
+import com.autodict.data.integration.ShareToKeep
 
 /** Vis ei oppføring med tekst, avspeling og offline transkripsjon. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +52,15 @@ fun EntryDetailScreen(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    val consentLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        viewModel.onGoogleTaskConsentResult(result.resultCode, result.data)
+    }
+    LaunchedEffect(ui.pendingGoogleTaskConsent) {
+        ui.pendingGoogleTaskConsent?.let { consentLauncher.launch(it) }
+    }
 
     Scaffold(
         topBar = {
@@ -167,6 +180,8 @@ fun EntryDetailScreen(
                                                 if (!launched) {
                                                     viewModel.reportMessage("Fann inga kalender-app på eininga.")
                                                 }
+                                            } else {
+                                                viewModel.createGoogleTask(action)
                                             }
                                         }) {
                                             Text(if (action.type == ActionType.CALENDAR_EVENT) "Legg til i kalender" else "Godkjenn oppgåve")
@@ -198,6 +213,20 @@ fun EntryDetailScreen(
                                 "(${TargetLanguage.fromCode(entry.language).displayName.lowercase()})",
                             style = MaterialTheme.typography.bodySmall,
                         )
+                    }
+
+                    if (entry.body.isNotBlank()) {
+                        OutlinedButton(
+                            onClick = {
+                                val shared = ShareToKeep.share(context, entry.title.ifBlank { "Autodict" }, entry.body)
+                                if (!shared) {
+                                    viewModel.reportMessage("Fann ingen app å dele til.")
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Del til Keep")
+                        }
                     }
                 }
             }

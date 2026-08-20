@@ -1,11 +1,13 @@
 package com.autodict.ui.settings
 
 import android.app.Application
+import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.autodict.data.integration.GoogleAccountLinker
 import com.autodict.data.storage.AppSettings
 import com.autodict.data.storage.SafRepository
 import com.autodict.data.storage.StoragePaths
@@ -37,6 +39,10 @@ data class SettingsUiState(
     val language: TargetLanguage = TargetLanguage.DEFAULT,
     val autoTranscribe: Boolean = false,
     val keepOriginalWav: Boolean = false,
+    // Google Tasks (M6, opt-in)
+    val googleTasksEnabled: Boolean = false,
+    val googleAccountEmail: String? = null,
+    val linkingAccount: Boolean = false,
 )
 
 /**
@@ -79,6 +85,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 language = TargetLanguage.fromCode(settings.transcriptionLanguage.first()),
                 autoTranscribe = settings.autoTranscribe.first(),
                 keepOriginalWav = settings.keepOriginalWav.first(),
+                googleTasksEnabled = settings.googleTasksEnabled.first(),
+                googleAccountEmail = settings.googleAccountEmail.first(),
             )
         }
     }
@@ -136,6 +144,47 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             settings.setKeepOriginalWav(enabled)
             _ui.value = _ui.value.copy(keepOriginalWav = enabled)
+        }
+    }
+
+    // --- Google Tasks (M6, opt-in) ---
+
+    fun setGoogleTasksEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settings.setGoogleTasksEnabled(enabled)
+            _ui.value = _ui.value.copy(googleTasksEnabled = enabled)
+        }
+    }
+
+    /**
+     * Opnar Google sin kontoveljar via Credential Manager. Treng ein Activity-context for UI-et
+     * (Application-context frå [AndroidViewModel] held ikkje), difor sender skjermen inn
+     * `LocalContext.current`.
+     */
+    fun linkGoogleAccount(activityContext: Context) {
+        viewModelScope.launch {
+            _ui.value = _ui.value.copy(linkingAccount = true)
+            val result = GoogleAccountLinker.signIn(activityContext)
+            result.onSuccess { email ->
+                settings.setGoogleAccountEmail(email)
+                _ui.value = _ui.value.copy(
+                    linkingAccount = false,
+                    googleAccountEmail = email,
+                    message = "Kopla til Google-konto: $email",
+                )
+            }.onFailure { e ->
+                _ui.value = _ui.value.copy(
+                    linkingAccount = false,
+                    message = "Klarte ikkje kople til Google-konto: ${e.message}",
+                )
+            }
+        }
+    }
+
+    fun unlinkGoogleAccount() {
+        viewModelScope.launch {
+            settings.setGoogleAccountEmail(null)
+            _ui.value = _ui.value.copy(googleAccountEmail = null, message = "Google-konto fjerna.")
         }
     }
 
