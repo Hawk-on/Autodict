@@ -139,7 +139,7 @@ med permissive avhengnader (MIT/Apache/BSD), men unngå å bundle inkompatible b
 - [x] **M3a** – Lokal indeks (JSON-cache + billig mtime-reconcile)
 - [x] **M3b** – Opus-arkiv (MediaCodec; minSdk 29)
 - [x] **M4** – Offline transkripsjon (whisper.cpp + NB-Whisper)
-- [ ] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender
+- [x] **M5** – Handlingsuttrekk (offline, regelbasert) + kalender
 - [ ] **M6** – Google Tasks + del-til-Keep
 - [ ] **M7** – Claude API (opt-in)
 - [ ] **M8** – Lokal LLM-hjerne (NB-Llama/Borealis + llama.cpp): assistent + sammendrag dag/veke/månad
