@@ -71,7 +71,7 @@ portabel på tvers av system.
 
 ## Byggje
 
-> **Krav:** JDK 17+, Android SDK (compileSdk 35), og nettilgang til Google sitt Maven-repo
+> **Krav:** JDK 17+, Android SDK (compileSdk 37), og nettilgang til Google sitt Maven-repo
 > (`maven.google.com`) for AndroidX/Compose og Android Gradle Plugin.
 
 ```bash
@@ -86,7 +86,7 @@ lyd og transkripsjon kan ikkje testast i emulator utan vidare).
 ## Teknologi
 
 - Kotlin + Jetpack Compose, Material 3
-- minSdk 26, targetSdk 35
+- minSdk 29, targetSdk 37
 - whisper.cpp (NDK/JNI) + NB-Whisper GGML-modellar (M4)
 - Storage Access Framework + DocumentFile
 - DataStore, kotlinx.serialization, coroutines
