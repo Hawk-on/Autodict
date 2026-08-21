@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +33,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,83 +69,94 @@ fun OnboardingScreen(
         ActivityResultContracts.RequestPermission(),
     ) { viewModel.complete(onDone) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .padding(top = 24.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+    // Surface, ikkje berre Column: MaterialTheme set fargepaletten, men det er Surface som
+    // leverer LocalContentColor. Utan han fell tekst som ikkje set farge sjølv tilbake på
+    // svart – på mørk botn blir overskrifter og etikettar då usynlege. Dei andre skjermane
+    // slepp unna fordi Scaffold har ein Surface inni seg.
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        StepIndicator(current = ui.stepNumber, total = ui.totalSteps)
-
-        Text(
-            "STEG ${ui.stepNumber} AV ${ui.totalSteps}",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-
         Column(
             modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(horizontal = 24.dp)
+                .padding(top = 24.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            when (ui.step) {
-                OnboardingStep.FOLDER -> FolderStep(ui)
-                OnboardingStep.LANGUAGE -> LanguageStep(ui, viewModel::selectLanguage)
-                OnboardingStep.MODEL -> ModelStep(ui, viewModel)
-                OnboardingStep.PERMISSION -> PermissionStep(ui)
-            }
+            StepIndicator(current = ui.stepNumber, total = ui.totalSteps)
 
-            ui.message?.let { message ->
-                Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-            }
-        }
+            Text(
+                "STEG ${ui.stepNumber} AV ${ui.totalSteps}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
 
-        when (ui.step) {
-            OnboardingStep.FOLDER -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Button(
-                    onClick = { folderPicker.launch(null) },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                ) {
-                    Icon(Icons.Default.Folder, contentDescription = null)
-                    Spacer(Modifier.width(10.dp))
-                    Text(if (ui.folderName == null) "Vel mappe" else "Byt mappe")
-                }
-                TextButton(onClick = viewModel::next, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (ui.folderName == null) "Hopp over — vel seinare" else "Hald fram")
-                }
-            }
-
-            OnboardingStep.PERMISSION -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Button(
-                    onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                ) {
-                    Icon(Icons.Default.Mic, contentDescription = null)
-                    Spacer(Modifier.width(10.dp))
-                    Text("Gi tilgang og kom i gang")
-                }
-                TextButton(
-                    onClick = { viewModel.complete(onDone) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Ikkje no")
-                }
-            }
-
-            else -> Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                OutlinedButton(onClick = viewModel::back, modifier = Modifier.height(56.dp)) {
-                    Text("Tilbake")
+                when (ui.step) {
+                    OnboardingStep.FOLDER -> FolderStep(ui)
+                    OnboardingStep.LANGUAGE -> LanguageStep(ui, viewModel::selectLanguage)
+                    OnboardingStep.MODEL -> ModelStep(ui, viewModel)
+                    OnboardingStep.PERMISSION -> PermissionStep(ui)
                 }
-                Button(
-                    onClick = viewModel::next,
-                    modifier = Modifier.weight(1f).height(56.dp),
+
+                ui.message?.let { message ->
+                    Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                }
+            }
+
+            when (ui.step) {
+                OnboardingStep.FOLDER -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Button(
+                        onClick = { folderPicker.launch(null) },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                    ) {
+                        Icon(Icons.Default.Folder, contentDescription = null)
+                        Spacer(Modifier.width(10.dp))
+                        Text(if (ui.folderName == null) "Vel mappe" else "Byt mappe")
+                    }
+                    TextButton(onClick = viewModel::next, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (ui.folderName == null) "Hopp over — vel seinare" else "Hald fram")
+                    }
+                }
+
+                OnboardingStep.PERMISSION -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Button(
+                        onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                    ) {
+                        Icon(Icons.Default.Mic, contentDescription = null)
+                        Spacer(Modifier.width(10.dp))
+                        Text("Gi tilgang og kom i gang")
+                    }
+                    TextButton(
+                        onClick = { viewModel.complete(onDone) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Ikkje no")
+                    }
+                }
+
+                else -> Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Hald fram")
+                    OutlinedButton(onClick = viewModel::back, modifier = Modifier.height(56.dp)) {
+                        Text("Tilbake")
+                    }
+                    Button(
+                        onClick = viewModel::next,
+                        modifier = Modifier.weight(1f).height(56.dp),
+                    ) {
+                        Text("Hald fram")
+                    }
                 }
             }
         }
