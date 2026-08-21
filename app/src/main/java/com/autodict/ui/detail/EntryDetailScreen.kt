@@ -11,7 +11,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -40,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.ui.common.AudioPlayerBar
+import com.autodict.ui.common.DeleteEntryDialog
 import com.autodict.ui.common.AudioSource
 import com.autodict.data.actions.ActionType
 import com.autodict.data.integration.CalendarIntentLauncher
@@ -56,37 +56,14 @@ fun EntryDetailScreen(
     val context = LocalContext.current
     var confirmDelete by remember { mutableStateOf(false) }
 
-    if (confirmDelete) {
-        val entry = ui.entry
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("Slette oppføringa?") },
-            text = {
-                Text(
-                    buildString {
-                        append("«")
-                        append(entry?.title?.ifBlank { "Utan tittel" } ?: "Utan tittel")
-                        append("» blir sletta frå mappa – ")
-                        // Dagboka er filer, så det er filene som forsvinn. Sei det rett ut,
-                        // i staden for eit vagt «kan ikkje angrast».
-                        append(if (entry?.audio != null) "både teksten og lydopptaket." else "tekstfila.")
-                        append(" Er mappa synka, hamnar dei i papirkorga til synkingtenesta.")
-                    },
-                )
+    ui.entry?.takeIf { confirmDelete }?.let { entry ->
+        DeleteEntryDialog(
+            entry = entry,
+            onConfirm = {
+                confirmDelete = false
+                viewModel.delete(onBack)
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmDelete = false
-                        viewModel.delete(onBack)
-                    },
-                ) {
-                    Text("Slett", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Avbryt") }
-            },
+            onDismiss = { confirmDelete = false },
         )
     }
 

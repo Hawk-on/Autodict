@@ -39,6 +39,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -47,6 +51,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -57,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autodict.data.audio.RecorderState
 import com.autodict.domain.model.DiaryEntry
+import com.autodict.ui.common.DeleteEntryDialog
 import com.autodict.ui.record.RecordViewModel
 import com.autodict.ui.record.RecordedDraft
 import java.time.ZonedDateTime
@@ -98,6 +105,18 @@ fun HomeScreen(
     ) { granted -> if (granted) recordViewModel.start() }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
+
+    pendingDelete?.let { entry ->
+        DeleteEntryDialog(
+            entry = entry,
+            onConfirm = {
+                pendingDelete = null
+                listViewModel.delete(entry)
+            },
+            onDismiss = { pendingDelete = null },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -149,6 +168,7 @@ fun HomeScreen(
             else -> EntryList(
                 entries = ui.entries,
                 onOpenEntry = onOpenEntry,
+                onRequestDelete = { pendingDelete = it },
                 modifier = Modifier.padding(padding),
             )
         }
@@ -177,6 +197,7 @@ fun HomeScreen(
 private fun EntryList(
     entries: List<DiaryEntry>,
     onOpenEntry: (String) -> Unit,
+    onRequestDelete: (DiaryEntry) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val grouped = remember(entries) {
@@ -207,11 +228,58 @@ private fun EntryList(
                 )
             }
             items(monthEntries, key = { it.id }) { entry ->
-                EntryRow(entry = entry, onClick = { onOpenEntry(entry.id) })
+                SwipeToDeleteRow(
+                    onRequestDelete = { onRequestDelete(entry) },
+                ) {
+                    EntryRow(entry = entry, onClick = { onOpenEntry(entry.id) })
+                }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
         }
     }
+}
+
+/**
+ * Sveip frå høgre for å slette. Innhaldet blir **ikkje** dismissa av sveipen sjølv:
+ * [SwipeToDismissBoxState.confirmValueChange] svarar alltid `false`, så raden sprett
+ * tilbake og stadfestingsdialogen tek over. Alternativet – å la raden forsvinne først og
+ * setje henne tilbake om brukaren avbryt – ser ut som om noko vart sletta og så kom att.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeToDeleteRow(
+    onRequestDelete: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) onRequestDelete()
+            false
+        },
+    )
+
+    SwipeToDismissBox(
+        state = state,
+        // Berre éin retning: sveip mot venstre er den etablerte «fjern»-gesten, og å ha
+        // begge ville gjort utilsikta sveip dobbelt så sannsynleg.
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        },
+        content = { content() },
+    )
 }
 
 @Composable
@@ -219,6 +287,8 @@ private fun EntryRow(entry: DiaryEntry, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // Raden må vere ugjennomsiktig, elles skin den raude sveipe-bakgrunnen gjennom.
+            .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),

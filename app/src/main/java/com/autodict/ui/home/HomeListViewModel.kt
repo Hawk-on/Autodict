@@ -34,6 +34,14 @@ class HomeListViewModel(app: Application) : AndroidViewModel(app) {
             HomeListUiState(loading = m.loading, hasFolder = m.hasFolder, entries = entries)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeListUiState())
 
+    /**
+     * Slettar ei oppføring. Lista oppdaterer seg av seg sjølv – ho ser på indeksen, og
+     * [com.autodict.data.diary.DiaryRepository.delete] tek oppføringa ut der.
+     */
+    fun delete(entry: DiaryEntry) {
+        viewModelScope.launch { repo.delete(entry) }
+    }
+
     fun refresh() {
         viewModelScope.launch {
             val hasFolder = repo.hasFolder()
