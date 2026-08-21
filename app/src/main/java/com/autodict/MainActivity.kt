@@ -13,6 +13,7 @@ import com.autodict.data.storage.AppSettings
 import com.autodict.ui.navigation.AutodictNavHost
 import com.autodict.ui.theme.AutodictTheme
 import com.autodict.ui.theme.ThemeMode
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class MainActivity : ComponentActivity() {
@@ -20,16 +21,26 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        val themeMode = AppSettings(applicationContext).themeMode.map { ThemeMode.fromId(it) }
+        val settings = AppSettings(applicationContext)
+        val themeMode = settings.themeMode.map { ThemeMode.fromId(it) }
+        // Flow er kovariant, så Flow<Boolean> er ein Flow<Boolean?> – det lèt oss bruke null
+        // som «ikkje lese enno» utan å mappe.
+        val onboardingCompleted: Flow<Boolean?> = settings.onboardingCompleted
 
         setContent {
             // Startar på systemvalet så første frame ikkje blinkar før DataStore har svart.
             val mode by themeMode.collectAsStateWithLifecycle(initialValue = ThemeMode.DEFAULT)
 
+            // null = ikkje lese enno. Vi byggjer ikkje NavHost før svaret er inne, elles
+            // ville heimeskjermen bli vist eit augeblink før rettleiinga tok over.
+            val completed by onboardingCompleted.collectAsStateWithLifecycle(initialValue = null)
+
             LaunchedEffect(mode) { applyNightMode(mode) }
 
             AutodictTheme(themeMode = mode) {
-                AutodictNavHost()
+                completed?.let { done ->
+                    AutodictNavHost(startWithOnboarding = !done)
+                }
             }
         }
     }

@@ -57,6 +57,7 @@ private const val SPONSORS_URL = "https://github.com/sponsors/Hawk-on"
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onRestartOnboarding: () -> Unit,
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
@@ -277,6 +278,19 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
                 )
+            }
+
+            HorizontalDivider()
+            Text("Oppstart", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Gå gjennom oppsettet av mappe, målform og modell på nytt.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(
+                onClick = { viewModel.restartOnboarding(onRestartOnboarding) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Køyr oppstartsrettleiinga på nytt")
             }
 
             HorizontalDivider()

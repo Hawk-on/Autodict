@@ -17,6 +17,17 @@ data class RecordingResult(val file: File, val durationSeconds: Int)
 sealed interface RecorderState {
     data object Idle : RecorderState
     data class Recording(val elapsedMs: Long, val amplitude: Float) : RecorderState
+    data class Paused(val elapsedMs: Long) : RecorderState
+
+    /** Lengda så langt – 0 når det ikkje er noko opptak i gang. */
+    val elapsedMsOrZero: Long
+        get() = when (this) {
+            Idle -> 0L
+            is Recording -> elapsedMs
+            is Paused -> elapsedMs
+        }
+
+    val isActive: Boolean get() = this !is Idle
 }
 
 /**
@@ -49,6 +60,7 @@ class AudioRecorder {
     val state: StateFlow<RecorderState> = _state.asStateFlow()
 
     @Volatile private var running = false
+    @Volatile private var paused = false
     private var thread: Thread? = null
     private var record: AudioRecord? = null
     private var outFile: File? = null
@@ -72,20 +84,27 @@ class AudioRecorder {
         outFile = file
         totalBytes.set(0)
         running = true
+        paused = false
         recorder.startRecording()
         _state.value = RecorderState.Recording(0, 0f)
 
-        val startedAt = System.currentTimeMillis()
         thread = Thread {
             val buffer = ByteArray(bufferSize)
             try {
                 while (running) {
                     val read = recorder.read(buffer, 0, buffer.size)
                     if (read > 0) {
+                        // Under pause held vi lesinga i gang, men kastar lyden. Å stoppe
+                        // AudioRecord ville gitt eit klikk i overgangen når han startar att.
+                        if (paused) {
+                            _state.value = RecorderState.Paused(elapsedMs())
+                            continue
+                        }
+
                         raf.write(buffer, 0, read)
                         totalBytes.addAndGet(read.toLong())
 
-                        // Calculate RMS amplitude for UI
+                        // RMS-nivå til nivåmålaren i UI-et.
                         var sum = 0.0
                         for (i in 0 until read step 2) {
                             if (i + 1 < read) {
@@ -97,7 +116,7 @@ class AudioRecorder {
                         val rms = if (read > 0) Math.sqrt(sum / (read / 2)) else 0.0
                         val amplitude = (rms / Short.MAX_VALUE.toDouble()).toFloat().coerceIn(0f, 1f)
 
-                        _state.value = RecorderState.Recording(System.currentTimeMillis() - startedAt, amplitude)
+                        _state.value = RecorderState.Recording(elapsedMs(), amplitude)
                     }
                 }
             } finally {
@@ -110,6 +129,25 @@ class AudioRecorder {
             }
         }.also { it.start() }
         return true
+    }
+
+    /**
+     * Lengda utleidd frå talet på skrivne byte, ikkje frå klokka. Det gir nøyaktig den
+     * lengda lydfila faktisk har, og pausar blir automatisk haldne utanfor.
+     */
+    private fun elapsedMs(): Long = totalBytes.get() * 1000 / bytesPerSecond
+
+    /** Set opptaket på pause. Lyden under pausen blir forkasta. */
+    fun pause() {
+        if (!running || paused) return
+        paused = true
+        _state.value = RecorderState.Paused(elapsedMs())
+    }
+
+    fun resume() {
+        if (!running || !paused) return
+        paused = false
+        _state.value = RecorderState.Recording(elapsedMs(), 0f)
     }
 
     private class OpenedRecorder(
@@ -153,8 +191,21 @@ class AudioRecorder {
 
     /** Stoppar opptaket og returnerer resultatet, eller null om ingenting var i gang. */
     fun stop(): RecordingResult? {
+        val file = halt() ?: return null
+        val durationSeconds = (totalBytes.get() / bytesPerSecond).toInt()
+        return RecordingResult(file, durationSeconds)
+    }
+
+    /** Stoppar og slettar opptaket. Brukt av «Forkast» medan ein tek opp. */
+    fun discard() {
+        halt()?.let { runCatching { it.delete() } }
+    }
+
+    /** Felles nedstenging: stopp tråden, frigi AudioRecord, og gi tilbake fila. */
+    private fun halt(): File? {
         if (!running) return null
         running = false
+        paused = false
         thread?.join()
         thread = null
         record?.run {
@@ -164,9 +215,6 @@ class AudioRecorder {
         record = null
         _state.value = RecorderState.Idle
 
-        val file = outFile ?: return null
-        outFile = null
-        val durationSeconds = (totalBytes.get() / bytesPerSecond).toInt()
-        return RecordingResult(file, durationSeconds)
+        return outFile.also { outFile = null }
     }
 }

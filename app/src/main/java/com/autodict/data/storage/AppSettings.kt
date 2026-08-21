@@ -88,9 +88,21 @@ class AppSettings(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[THEME_MODE] = id }
     }
 
+    /**
+     * Om oppstartsrettleiinga er gjennomgått. Styrer berre om ho blir vist – vala ho gjer
+     * er vanlege innstillingar, så det er trygt å køyre ho på nytt.
+     */
+    val onboardingCompleted: Flow<Boolean> =
+        context.dataStore.data.map { prefs -> prefs[ONBOARDING_DONE] ?: false }
+
+    suspend fun setOnboardingCompleted(done: Boolean) {
+        context.dataStore.edit { prefs -> prefs[ONBOARDING_DONE] = done }
+    }
+
     private companion object {
         val TREE_URI = stringPreferencesKey("tree_uri")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val ONBOARDING_DONE = booleanPreferencesKey("onboarding_completed")
         val KEEP_WAV = booleanPreferencesKey("keep_original_wav")
         val WHISPER_MODEL = stringPreferencesKey("whisper_model")
         val WIFI_ONLY = booleanPreferencesKey("wifi_only_download")

@@ -1,4 +1,4 @@
-package com.autodict.ui.list
+package com.autodict.ui.home
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -12,27 +12,27 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class ListUiState(
+data class HomeListUiState(
     val loading: Boolean = true,
     val hasFolder: Boolean = true,
     val entries: List<DiaryEntry> = emptyList(),
 )
 
-class EntryListViewModel(app: Application) : AndroidViewModel(app) {
+/**
+ * Oppføringane på heimeskjermen. Lista kjem reaktivt frå den lokale indeks-cachen (visast
+ * straks), medan [refresh] gjer ei billig avstemming mot mappa.
+ */
+class HomeListViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = createDiaryRepository(app)
 
     private data class Meta(val loading: Boolean = true, val hasFolder: Boolean = true)
     private val meta = MutableStateFlow(Meta())
 
-    /**
-     * Lista kjem reaktivt frå den lokale indeks-cachen (visast straks), kombinert med
-     * laste-/mappe-status. [refresh] utløyser ein billig [com.autodict.data.diary.DiaryRepository.sync].
-     */
-    val ui: StateFlow<ListUiState> =
+    val ui: StateFlow<HomeListUiState> =
         combine(meta, repo.observeEntries()) { m, entries ->
-            ListUiState(loading = m.loading, hasFolder = m.hasFolder, entries = entries)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ListUiState())
+            HomeListUiState(loading = m.loading, hasFolder = m.hasFolder, entries = entries)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeListUiState())
 
     fun refresh() {
         viewModelScope.launch {
