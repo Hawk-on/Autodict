@@ -54,6 +54,13 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    fun pause() = recorder.pause()
+
+    fun resume() = recorder.resume()
+
+    /** Avbryt og slett opptaket. Ingen draft blir laga, så vi går ikkje vidare til utkast. */
+    fun discard() = recorder.discard()
+
     fun consumeDraft() {
         _draft.value = null
     }

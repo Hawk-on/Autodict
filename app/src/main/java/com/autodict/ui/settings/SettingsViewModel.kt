@@ -138,6 +138,14 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Nullstiller flagget og lèt navigasjonen ta oss til rettleiinga. */
+    fun restartOnboarding(onReady: () -> Unit) {
+        viewModelScope.launch {
+            settings.setOnboardingCompleted(false)
+            onReady()
+        }
+    }
+
     fun selectThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             settings.setThemeMode(mode.id)
