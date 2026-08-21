@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
@@ -59,6 +61,23 @@ class EntryDetailViewModel(
                 audioUri = loaded?.audioUri,
                 extractedActions = actions,
             )
+        }
+    }
+
+    /**
+     * Slettar oppføringa og går tilbake. Sjølve slettinga er NonCancellable: navigasjonen
+     * bort ryddar denne ViewModel-en, og skjer det midt i, skal vi ikkje ende opp med
+     * lydfila sletta og markdown-fila i behald.
+     */
+    fun delete(onDeleted: () -> Unit) {
+        val entry = _ui.value.entry ?: return
+        viewModelScope.launch {
+            val ok = withContext(NonCancellable) { repo.delete(entry) }
+            if (ok) {
+                onDeleted()
+            } else {
+                _ui.value = _ui.value.copy(message = "Klarte ikkje slette oppføringa.")
+            }
         }
     }
 

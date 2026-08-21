@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -27,6 +29,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
@@ -49,6 +54,41 @@ fun EntryDetailScreen(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    if (confirmDelete) {
+        val entry = ui.entry
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Slette oppføringa?") },
+            text = {
+                Text(
+                    buildString {
+                        append("«")
+                        append(entry?.title?.ifBlank { "Utan tittel" } ?: "Utan tittel")
+                        append("» blir sletta frå mappa – ")
+                        // Dagboka er filer, så det er filene som forsvinn. Sei det rett ut,
+                        // i staden for eit vagt «kan ikkje angrast».
+                        append(if (entry?.audio != null) "både teksten og lydopptaket." else "tekstfila.")
+                        append(" Er mappa synka, hamnar dei i papirkorga til synkingtenesta.")
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmDelete = false
+                        viewModel.delete(onBack)
+                    },
+                ) {
+                    Text("Slett", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text("Avbryt") }
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -57,6 +97,13 @@ fun EntryDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tilbake")
+                    }
+                },
+                actions = {
+                    if (ui.entry != null) {
+                        IconButton(onClick = { confirmDelete = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Slett oppføring")
+                        }
                     }
                 },
             )

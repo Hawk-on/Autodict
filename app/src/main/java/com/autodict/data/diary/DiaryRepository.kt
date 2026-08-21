@@ -137,6 +137,29 @@ class DiaryRepository(
         return true
     }
 
+    /**
+     * Slettar ei oppføring: både `.md`-fila og lydfila, og tek henne ut av indeksen.
+     *
+     * Filene er databasen, så dette er ei ekte sletting – ikkje eit flagg. Er mappa synka
+     * (Drive/Dropbox), hamnar filene i papirkorga der etter tenesta sine reglar; lokalt er
+     * dei borte. Markdown-fila blir sletta **sist**: ryk noko undervegs, er det betre å sitje
+     * att med ei oppføring utan lyd enn med ei foreldrelaus lydfil som ingenting peikar på.
+     */
+    suspend fun delete(entry: DiaryEntry): Boolean {
+        val folders = StoragePaths.dateFoldersFromId(entry.id)
+
+        entry.audio?.let { audio ->
+            if (!saf.deleteFile(folders, audio)) return false
+        }
+        if (!saf.deleteFile(folders, "${entry.id}.md")) return false
+
+        ensureLoaded()
+        val updated = index.value.filterNot { it.id == entry.id }
+        index.value = updated
+        store.save(updated)
+        return true
+    }
+
     private suspend fun ensureLoaded() {
         if (loadedFromStore) return
         index.value = store.load()
