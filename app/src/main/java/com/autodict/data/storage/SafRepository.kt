@@ -154,6 +154,21 @@ class SafRepository(
     }
 
     /**
+     * Slettar `<rot>/<folders...>/<fileName>`. True om fila vart sletta **eller** ikkje fanst
+     * – innringaren vil vite at ho er borte, ikkje kven som fjerna henne. Tomme datomapper
+     * blir liggjande att; dei er billige og kan bli brukte att same månad.
+     */
+    suspend fun deleteFile(folders: List<String>, fileName: String): Boolean =
+        withContext(Dispatchers.IO) {
+            var dir = root() ?: return@withContext false
+            for (folder in folders) {
+                dir = dir.findFile(folder)?.takeIf { it.isDirectory } ?: return@withContext true
+            }
+            val file = dir.findFile(fileName) ?: return@withContext true
+            runCatching { file.delete() }.getOrDefault(false)
+        }
+
+    /**
      * Les alle `.md`-filer i mappa (rekursivt). Hoppar over "conflict"-filer frå sync-klientar.
      * Treigt for mange filer – M3 innfører ein indeks/cache oppå dette.
      */

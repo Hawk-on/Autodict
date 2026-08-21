@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -27,6 +28,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
@@ -35,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.ui.common.AudioPlayerBar
+import com.autodict.ui.common.DeleteEntryDialog
 import com.autodict.ui.common.AudioSource
 import com.autodict.data.actions.ActionType
 import com.autodict.data.integration.CalendarIntentLauncher
@@ -49,6 +54,18 @@ fun EntryDetailScreen(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    ui.entry?.takeIf { confirmDelete }?.let { entry ->
+        DeleteEntryDialog(
+            entry = entry,
+            onConfirm = {
+                confirmDelete = false
+                viewModel.delete(onBack)
+            },
+            onDismiss = { confirmDelete = false },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -57,6 +74,13 @@ fun EntryDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tilbake")
+                    }
+                },
+                actions = {
+                    if (ui.entry != null) {
+                        IconButton(onClick = { confirmDelete = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Slett oppføring")
+                        }
                     }
                 },
             )
