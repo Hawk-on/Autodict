@@ -1,7 +1,6 @@
 package com.autodict.ui.home
 
 import android.Manifest
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -58,12 +57,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autodict.data.audio.RecorderState
 import com.autodict.domain.model.DiaryEntry
 import com.autodict.ui.common.DeleteEntryDialog
+import com.autodict.ui.common.RecordingPermissions
 import com.autodict.ui.record.RecordViewModel
 import com.autodict.ui.record.RecordedDraft
 import java.time.ZonedDateTime
@@ -101,8 +100,12 @@ fun HomeScreen(
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> if (granted) recordViewModel.start() }
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { granted ->
+        // Berre mikrofonen er avgjerande. Blir varsel-løyvet avslått, tek vi likevel opp –
+        // brukaren mistar berre kontrollane i varselet.
+        if (granted[Manifest.permission.RECORD_AUDIO] == true) recordViewModel.start()
+    }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
@@ -132,14 +135,10 @@ fun HomeScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    val granted = ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.RECORD_AUDIO,
-                    ) == PackageManager.PERMISSION_GRANTED
-                    if (granted) {
+                    if (RecordingPermissions.canRecord(context)) {
                         recordViewModel.start()
                     } else {
-                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        permissionLauncher.launch(RecordingPermissions.required)
                     }
                 },
                 modifier = Modifier.size(68.dp),

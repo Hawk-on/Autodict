@@ -99,8 +99,26 @@ class AppSettings(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[ONBOARDING_DONE] = done }
     }
 
+    /**
+     * Eit ferdig opptak som enno ikkje er lagra som oppføring, lagra som
+     * `sti|starttid|lengd`.
+     *
+     * Trengst fordi eit opptak kan stoppast utan at appen er framme – frå varselet eller frå
+     * låseskjermen. Held vi utkastet berre i minnet, forsvinn det om prosessen blir rydda før
+     * du opnar appen att, og lydfila blir liggjande i cache utan at noko peikar på henne.
+     */
+    val pendingDraft: Flow<String?> =
+        context.dataStore.data.map { prefs -> prefs[PENDING_DRAFT] }
+
+    suspend fun setPendingDraft(value: String?) {
+        context.dataStore.edit { prefs ->
+            if (value == null) prefs.remove(PENDING_DRAFT) else prefs[PENDING_DRAFT] = value
+        }
+    }
+
     private companion object {
         val TREE_URI = stringPreferencesKey("tree_uri")
+        val PENDING_DRAFT = stringPreferencesKey("pending_draft")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_completed")
         val KEEP_WAV = booleanPreferencesKey("keep_original_wav")
