@@ -14,7 +14,6 @@ import android.util.Log
 import com.autodict.MainActivity
 import com.autodict.R
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.launchIn

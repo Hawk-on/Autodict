@@ -1,5 +1,6 @@
 package com.autodict.ui.quickrecord
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
@@ -27,6 +28,10 @@ class QuickRecordTileService : TileService() {
         }
     }
 
+    // Lint flaggar Intent-varianten som utdatert uansett API-nivå, men PendingIntent-varianten
+    // kom først i API 34 og vi støttar frå 29. Fallbacken under er difor den einaste vegen på
+    // eldre einingar, ikkje eit val – og lint-regelen har ingen måte å sjå det på.
+    @SuppressLint("StartActivityAndCollapseDeprecated")
     override fun onClick() {
         super.onClick()
 
@@ -34,7 +39,6 @@ class QuickRecordTileService : TileService() {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            // API 34 tok bort Intent-varianten; no må vi levere ein PendingIntent.
             startActivityAndCollapse(
                 PendingIntent.getActivity(
                     this,
