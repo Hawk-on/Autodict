@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Opptak av lyd. Foreground-service-typar (mikrofon/dataSync) kjem i M2/M4. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--
+      Frå API 29 blokkerer Android mikrofonen for appar som ikkje er i framgrunnen, og
+      AudioRecord held fram med å levere nullar i staden for å feile. Utan ei foreground
+      service av typen «microphone» blir difor eit opptak stille så snart skjermen låser seg.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- API 33+: varselet som følgjer tenesta krev eige løyve for å bli vist. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Nett trengst berre til opt-in-funksjonar (Google Tasks, Claude API, modell-nedlasting). -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- For å sjekke om vi er på Wi-Fi før modell-nedlasting (M4). -->
@@ -27,6 +36,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".data.audio.RecordingService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
     </application>
 
 </manifest>
