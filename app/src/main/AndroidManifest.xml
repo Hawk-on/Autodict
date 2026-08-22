@@ -37,10 +37,45 @@
             </intent-filter>
         </activity>
 
+        <!--
+          Hurtigopptak frå låseskjermen. showWhenLocked/turnScreenOn lèt han teiknast utan
+          opplåsing; excludeFromRecents held han ute av oversikta, sidan han ikkje er ein
+          stad ein "går tilbake til".
+        -->
+        <activity
+            android:name=".ui.quickrecord.QuickRecordActivity"
+            android:exported="true"
+            android:label="Ta opp"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Autodict">
+            <!--
+              LAUNCHER-oppføring i tillegg til hovudappen: det er slik ein snarveg eller
+              Samsung sitt "dobbelttrykk sideknapp → opne app" kan peike hit.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".data.audio.RecordingService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <service
+            android:name=".ui.quickrecord.QuickRecordTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_mic"
+            android:label="Autodict"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

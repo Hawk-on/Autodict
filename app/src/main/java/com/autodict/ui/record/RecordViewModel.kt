@@ -3,6 +3,7 @@ package com.autodict.ui.record
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.autodict.data.audio.PendingDraftStore
 import com.autodict.data.audio.RecorderState
 import com.autodict.data.audio.RecordingController
 import com.autodict.data.audio.RecordingService
@@ -37,13 +38,17 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
     private val _hasFolder = MutableStateFlow(true)
     val hasFolder: StateFlow<Boolean> = _hasFolder.asStateFlow()
 
-    /** Utkastet dukkar opp når tenesta har stoppa opptaket – òg om det skjedde frå varselet. */
-    val draft: StateFlow<RecordedDraft?> = RecordingController.result
-        .map { result ->
-            result?.let {
+    /**
+     * Utkastet som ventar. Kjelda er den persisterte [PendingDraftStore], ikkje minnet:
+     * eit opptak kan vere stoppa frå varselet eller frå låseskjermen, kanskje for lenge
+     * sidan, og då er prosessen ofte rydda før appen blir opna att.
+     */
+    val draft: StateFlow<RecordedDraft?> = PendingDraftStore.observe(app)
+        .map { pending ->
+            pending?.let {
                 RecordedDraft(
-                    audioPath = it.file.absolutePath,
-                    createdMillis = RecordingController.startedAtMillis,
+                    audioPath = it.audioPath,
+                    createdMillis = it.createdMillis,
                     durationSeconds = it.durationSeconds,
                 )
             }
@@ -70,7 +75,10 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
     /** Avbryt og slett opptaket. Ingen draft blir laga, så vi går ikkje vidare til utkast. */
     fun discard() = send(RecordingService.ACTION_DISCARD)
 
-    fun consumeDraft() = RecordingController.consumeResult()
+    fun consumeDraft() {
+        RecordingController.consumeResult()
+        PendingDraftStore.clear(getApplication())
+    }
 
     private fun send(action: String) =
         RecordingService.send(getApplication<Application>(), action)

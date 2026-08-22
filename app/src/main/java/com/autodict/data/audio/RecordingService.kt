@@ -59,6 +59,11 @@ class RecordingService : Service() {
 
             ACTION_STOP -> {
                 RecordingController.stop()
+                // Skriv utkastet til disk før vi stoppar: blir prosessen rydda før brukaren
+                // opnar appen, er opptaket framleis der.
+                RecordingController.result.value?.let { result ->
+                    PendingDraftStore.save(this, result, RecordingController.startedAtMillis)
+                }
                 stopAndRelease()
             }
 
@@ -127,6 +132,9 @@ class RecordingService : Service() {
             .setContentIntent(openApp)
             .setOngoing(true)
             .setUsesChronometer(false)
+            // Synleg med kontrollar på låseskjermen. Varselet avslører berre at appen tek
+            // opp og kor lenge – ikkje noko av innhaldet i dagboka.
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
             .addAction(
                 Notification.Action.Builder(
                     null,
