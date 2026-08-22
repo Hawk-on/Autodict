@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Opptak av lyd. Foreground-service-typar (mikrofon/dataSync) kjem i M2/M4. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--
+      Frå API 29 blokkerer Android mikrofonen for appar som ikkje er i framgrunnen, og
+      AudioRecord held fram med å levere nullar i staden for å feile. Utan ei foreground
+      service av typen «microphone» blir difor eit opptak stille så snart skjermen låser seg.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- API 33+: varselet som følgjer tenesta krev eige løyve for å bli vist. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Nett trengst berre til opt-in-funksjonar (Google Tasks, Claude API, modell-nedlasting). -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- For å sjekke om vi er på Wi-Fi før modell-nedlasting (M4). -->
@@ -27,6 +36,46 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+          Hurtigopptak frå låseskjermen. showWhenLocked/turnScreenOn lèt han teiknast utan
+          opplåsing; excludeFromRecents held han ute av oversikta, sidan han ikkje er ein
+          stad ein "går tilbake til".
+        -->
+        <activity
+            android:name=".ui.quickrecord.QuickRecordActivity"
+            android:exported="true"
+            android:label="Ta opp"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Autodict">
+            <!--
+              LAUNCHER-oppføring i tillegg til hovudappen: det er slik ein snarveg eller
+              Samsung sitt "dobbelttrykk sideknapp → opne app" kan peike hit.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".data.audio.RecordingService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <service
+            android:name=".ui.quickrecord.QuickRecordTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_mic"
+            android:label="Autodict"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

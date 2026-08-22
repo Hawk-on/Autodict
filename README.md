@@ -153,4 +153,5 @@ med permissive avhengnader (MIT/Apache/BSD), men unngå å bundle inkompatible b
 - [ ] **M8** – Lokal LLM-hjerne (NB-Llama/Borealis + llama.cpp): assistent + sammendrag dag/veke/månad
 - [ ] **M9** – Opplesing / TTS (Android system-TTS for norsk)
 - [ ] **M10** – Hurtigopptak-widget + polering
+      (opptak i bakgrunnen via foreground service er på plass)
 - [ ] **M11** – Forteljing & bok-eksport (rettleiande spørsmål, forteljings-modus, PDF/EPUB)

@@ -1,6 +1,5 @@
 package com.autodict.ui.onboarding
 
-import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -47,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.WhisperModel
+import com.autodict.ui.common.RecordingPermissions
 
 /**
  * Oppstartsrettleiing i fire steg. Same visuelle ramme for alle stega – stegindikator,
@@ -66,7 +66,7 @@ fun OnboardingScreen(
     // Løyvet er siste steg; uansett svar er rettleiinga ferdig – appen skal ikkje stå fast
     // fordi nokon sa nei, dei kan gi tilgang seinare når dei trykkjer på mikrofonen.
     val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
+        ActivityResultContracts.RequestMultiplePermissions(),
     ) { viewModel.complete(onDone) }
 
     // Surface, ikkje berre Column: MaterialTheme set fargepaletten, men det er Surface som
@@ -129,7 +129,7 @@ fun OnboardingScreen(
 
                 OnboardingStep.PERMISSION -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Button(
-                        onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                        onClick = { permissionLauncher.launch(RecordingPermissions.required) },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                     ) {
                         Icon(Icons.Default.Mic, contentDescription = null)
@@ -321,7 +321,11 @@ private fun ModelStep(ui: OnboardingUiState, viewModel: OnboardingViewModel) {
 @Composable
 private fun PermissionStep(ui: OnboardingUiState) {
     Title("Éin ting til")
-    Body("Autodict treng tilgang til mikrofonen for å ta opp. Lyden blir verande på telefonen.")
+    Body(
+        "Autodict treng tilgang til mikrofonen for å ta opp, og til å vise eit varsel " +
+            "medan opptaket går – det er varselet som lèt opptaket halde fram når skjermen " +
+            "låser seg. Lyden blir verande på telefonen.",
+    )
 
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Box(
