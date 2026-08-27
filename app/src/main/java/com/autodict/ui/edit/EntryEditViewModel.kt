@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.autodict.data.assistant.AssistantError
+import com.autodict.data.assistant.AssistantException
+import com.autodict.data.assistant.HttpDiaryAssistant
 import com.autodict.data.audio.AudioLoader
 import com.autodict.data.audio.OpusEncoder
 import com.autodict.data.diary.SaveStage
@@ -41,6 +44,9 @@ data class EditUiState(
     val audioPath: String? = null,
     val language: TargetLanguage = TargetLanguage.DEFAULT,
     val transcribing: Boolean = false,
+    val polishing: Boolean = false,
+    /** Transkripsjonen slik han var før oppreinsking – null når det ikkje er noko å angre. */
+    val rawTranscript: String? = null,
     val message: String? = null,
     /** Modell-id når teksten kjem frå transkripsjon – går i frontmatter ved lagring. */
     val transcribedModel: String? = null,
@@ -85,6 +91,67 @@ class EntryEditViewModel(
     fun onLanguageChange(language: TargetLanguage) = _ui.update { it.copy(language = language) }
 
     fun dismissMessage() = _ui.update { it.copy(message = null) }
+
+    /**
+     * Reinskriv teksten med assistenten. Berre på eksplisitt trykk – aldri automatisk, sidan
+     * dette er einaste staden i appen der innhaldet kan forlate eininga
+     * (CLAUDE.md-prinsipp 5).
+     *
+     * Originalen blir teken vare på i [rawTranscript], så «Angre» alltid er mogleg.
+     */
+    fun polish() {
+        if (_ui.value.polishing || _ui.value.body.isBlank()) return
+
+        viewModelScope.launch {
+            val config = settings.assistantConfig.first()
+            if (!config.isUsable) {
+                _ui.update { it.copy(message = "Assistenten er ikkje sett opp (Innstillingar).") }
+                return@launch
+            }
+
+            _ui.update { it.copy(polishing = true, message = "Reinskriv …") }
+
+            val before = _ui.value.body
+            val result = HttpDiaryAssistant(config)
+                .polish(before, _ui.value.language.displayName)
+
+            _ui.update { state ->
+                result.fold(
+                    onSuccess = { polished ->
+                        state.copy(
+                            polishing = false,
+                            rawTranscript = before,
+                            body = polished.body,
+                            // Ein tittel brukaren alt har skrive er meir verdt enn eit forslag.
+                            title = state.title.ifBlank { polished.title },
+                            message = "Reinskriven. Trykk «Angre» for å få tilbake originalen.",
+                        )
+                    },
+                    onFailure = { error ->
+                        state.copy(polishing = false, message = describePolishError(error))
+                    },
+                )
+            }
+        }
+    }
+
+    /** Set tilbake transkripsjonen slik han var før oppreinskinga. */
+    fun undoPolish() {
+        val original = _ui.value.rawTranscript ?: return
+        _ui.update {
+            it.copy(body = original, rawTranscript = null, message = "Originalen er tilbake.")
+        }
+    }
+
+    private fun describePolishError(error: Throwable): String =
+        when (val cause = (error as? AssistantException)?.error) {
+            AssistantError.NotConfigured -> "Assistenten er ikkje sett opp (Innstillingar)."
+            AssistantError.Unauthorized -> "Nøkkelen vart avvist."
+            is AssistantError.Offline -> "Nådde ikkje modellen. Er du på nett?"
+            is AssistantError.Http -> "Feil ${cause.code} frå modellen."
+            is AssistantError.BadResponse -> cause.detail
+            null -> error.message ?: "Oppreinskinga feila."
+        }
 
     /** Transkriberer cache-WAV-en og legg teksten i tekstfeltet, klar til retting. */
     fun transcribe() {

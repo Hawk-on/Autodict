@@ -259,6 +259,8 @@ fun SettingsScreen(
                 Text("Arkiver tapsfri WAV i staden", style = MaterialTheme.typography.bodyMedium)
             }
 
+            AssistantSettingsSection(ui = ui, viewModel = viewModel)
+
             HorizontalDivider()
             Text("Diagnostikk", style = MaterialTheme.typography.titleMedium)
             Text(
