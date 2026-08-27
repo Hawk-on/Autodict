@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Android blokkerer klartekst-HTTP som standard, og det skal han. Men ein lokal modell
-  (Ollama, LM Studio, llama.cpp sin server) køyrer typisk på http://192.168.x.x:11434
-  utan sertifikat. Utan unntaket under ville "peik appen på min eigen Ollama" berre feile.
+  Klartekst-HTTP er tillate her, men det er IKKJE slik det faktisk blir avgrensa.
 
-  Unntaket er avgrensa til private adresseområde: alt ut på internett må framleis vere
-  HTTPS. Det er ei reell oppmjuking, men berre mot maskiner på ditt eige nett.
+  Grunnen: <domain> tek berre vertsnamn og enkeltadresser, ikkje CIDR. Skriv ein
+  192.168.0.0/16 her, blir det tolka som eit vertsnamn som aldri matchar – regelen ser rett
+  ut og gjer ingenting. Og adressa til ein sjølvhosta modell er uansett ukjend på
+  byggetidspunktet, så ho kan ikkje listast opp.
+
+  Den verkelege avgrensinga ligg difor i PrivateHosts + HttpDiaryAssistant: appen nektar å
+  sende noko over http:// med mindre verten er på eit privat nett (LAN, loopback eller
+  Tailscale). Der kan regelen uttrykkjast rett, og han er dekt av testar.
 -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false" />
-
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">localhost</domain>
-        <domain includeSubdomains="false">10.0.0.0/8</domain>
-        <domain includeSubdomains="false">172.16.0.0/12</domain>
-        <domain includeSubdomains="false">192.168.0.0/16</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

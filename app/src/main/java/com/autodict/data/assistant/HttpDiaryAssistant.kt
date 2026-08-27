@@ -87,6 +87,17 @@ class HttpDiaryAssistant(
     }
 
     private fun post(url: URL, body: JsonObject): String {
+        // Klartekst berre mot eige nett. Manifestet kan ikkje uttrykkje dette – <domain>
+        // støttar ikkje CIDR – så handhevinga skjer her, der regelen kan skrivast rett.
+        if (url.protocol.equals("http", ignoreCase = true) && !PrivateHosts.isPrivate(url.host)) {
+            throw AssistantException(
+                AssistantError.BadResponse(
+                    "Adressa brukar http:// mot ${url.host}, som ikkje er på eit privat nett. " +
+                        "Bruk https://, eller ei adresse på LAN-et eller Tailscale.",
+                ),
+            )
+        }
+
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             doOutput = true
