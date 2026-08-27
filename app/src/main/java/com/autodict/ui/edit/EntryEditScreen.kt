@@ -168,6 +168,31 @@ fun EntryEditScreen(
                     }
                 }
 
+                // Assistenten er einaste staden teksten kan forlate eininga, så det skal
+                // vere eit medvite trykk – aldri noko som skjer av seg sjølv.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.polish() },
+                        enabled = !ui.polishing && !ui.transcribing && ui.body.isNotBlank(),
+                    ) {
+                        if (ui.polishing) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Text("  Reinskriv …")
+                        } else {
+                            Text("Reinskriv")
+                        }
+                    }
+
+                    if (ui.rawTranscript != null) {
+                        TextButton(onClick = { viewModel.undoPolish() }) {
+                            Text("Angre")
+                        }
+                    }
+                }
+
                 ui.message?.let { message ->
                     Text(message, style = MaterialTheme.typography.bodySmall)
                 }

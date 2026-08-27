@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Klartekst-HTTP er tillate her, men det er IKKJE slik det faktisk blir avgrensa.
+
+  Grunnen: <domain> tek berre vertsnamn og enkeltadresser, ikkje CIDR. Skriv ein
+  192.168.0.0/16 her, blir det tolka som eit vertsnamn som aldri matchar – regelen ser rett
+  ut og gjer ingenting. Og adressa til ein sjølvhosta modell er uansett ukjend på
+  byggetidspunktet, så ho kan ikkje listast opp.
+
+  Den verkelege avgrensinga ligg difor i PrivateHosts + HttpDiaryAssistant: appen nektar å
+  sende noko over http:// med mindre verten er på eit privat nett (LAN, loopback eller
+  Tailscale). Der kan regelen uttrykkjast rett, og han er dekt av testar.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

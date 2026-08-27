@@ -6,6 +6,12 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.autodict.data.assistant.AssistantConfig
+import com.autodict.data.assistant.AssistantCredential
+import com.autodict.data.assistant.AssistantError
+import com.autodict.data.assistant.AssistantException
+import com.autodict.data.assistant.AssistantPreset
+import com.autodict.data.assistant.HttpDiaryAssistant
 import com.autodict.data.storage.AppSettings
 import com.autodict.data.storage.SafRepository
 import com.autodict.data.storage.StoragePaths
@@ -40,6 +46,13 @@ data class SettingsUiState(
     val autoTranscribe: Boolean = false,
     val keepOriginalWav: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.DEFAULT,
+    // Assistent (M7). Nøkkelen blir halden i minnet her medan skjermen er open, og
+    // lagra kryptert – han blir aldri vist tilbake i klartekst etter omstart.
+    val assistant: AssistantConfig = AssistantConfig(),
+    val assistantKeyInput: String = "",
+    val assistantHasStoredKey: Boolean = false,
+    val assistantTesting: Boolean = false,
+    val assistantTestResult: String? = null,
     /** Resultat frå sjølvtesten – null til brukaren har køyrt han. */
     val diagnostics: String? = null,
 )
@@ -77,6 +90,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     private fun loadModelState() {
         viewModelScope.launch {
             val id = settings.whisperModelId.first()
+            val assistant = settings.assistantConfig.first()
             _ui.value = _ui.value.copy(
                 selectedModelId = id,
                 wifiOnly = settings.wifiOnlyDownload.first(),
@@ -85,6 +99,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 autoTranscribe = settings.autoTranscribe.first(),
                 keepOriginalWav = settings.keepOriginalWav.first(),
                 themeMode = ThemeMode.fromId(settings.themeMode.first()),
+                assistant = assistant,
+                assistantHasStoredKey = assistant.credential is AssistantCredential.ApiKey,
             )
         }
     }
@@ -137,6 +153,75 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             _ui.value = _ui.value.copy(autoTranscribe = enabled)
         }
     }
+
+    // --- Assistent (M7) ---
+
+    private fun updateAssistant(transform: (AssistantConfig) -> AssistantConfig) {
+        viewModelScope.launch {
+            val updated = transform(_ui.value.assistant)
+            _ui.value = _ui.value.copy(assistant = updated, assistantTestResult = null)
+            settings.setAssistantConfig(updated)
+        }
+    }
+
+    fun setAssistantEnabled(enabled: Boolean) = updateAssistant { it.copy(enabled = enabled) }
+
+    /** Byte av førehandsval set adresse og modell på nytt – dei gamle høyrer til førre leverandør. */
+    fun selectAssistantPreset(preset: AssistantPreset) = updateAssistant {
+        it.copy(preset = preset, baseUrl = preset.baseUrl, model = preset.defaultModel)
+    }
+
+    fun setAssistantBaseUrl(url: String) = updateAssistant { it.copy(baseUrl = url.trim()) }
+
+    fun setAssistantModel(model: String) = updateAssistant { it.copy(model = model.trim()) }
+
+    fun setAssistantKey(key: String) {
+        _ui.value = _ui.value.copy(assistantKeyInput = key, assistantTestResult = null)
+        updateAssistant {
+            it.copy(
+                credential = if (key.isBlank()) {
+                    AssistantCredential.None
+                } else {
+                    AssistantCredential.ApiKey(key)
+                },
+            )
+        }
+        if (key.isNotBlank()) {
+            _ui.value = _ui.value.copy(assistantHasStoredKey = true)
+        }
+    }
+
+    /**
+     * Eit ekte kall mot den valde modellen. Same tanke som transkripsjons-diagnostikken:
+     * du skal få vite at oppsettet verkar før du stolar på det.
+     */
+    fun testAssistant() {
+        viewModelScope.launch {
+            _ui.value = _ui.value.copy(assistantTesting = true, assistantTestResult = null)
+
+            val config = settings.assistantConfig.first()
+            val result = HttpDiaryAssistant(config).testConnection()
+
+            _ui.value = _ui.value.copy(
+                assistantTesting = false,
+                assistantTestResult = result.fold(
+                    onSuccess = { "✓ Svar frå modellen: «$it»" },
+                    onFailure = { describeAssistantError(it) },
+                ),
+            )
+        }
+    }
+
+    private fun describeAssistantError(error: Throwable): String =
+        when (val cause = (error as? AssistantException)?.error) {
+            AssistantError.NotConfigured -> "Fyll ut adresse og modell først."
+            AssistantError.Unauthorized -> "Nøkkelen vart avvist."
+            is AssistantError.Offline ->
+                "Nådde ikkje modellen (${cause.detail}). Er adressa rett, og er du på same nett?"
+            is AssistantError.Http -> "Feil ${cause.code}: ${cause.message}"
+            is AssistantError.BadResponse -> cause.detail
+            null -> error.message ?: "Ukjend feil."
+        }
 
     /** Nullstiller flagget og lèt navigasjonen ta oss til rettleiinga. */
     fun restartOnboarding(onReady: () -> Unit) {

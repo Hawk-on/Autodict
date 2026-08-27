@@ -7,6 +7,10 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.autodict.data.assistant.AssistantConfig
+import com.autodict.data.assistant.AssistantCredential
+import com.autodict.data.assistant.AssistantPreset
+import com.autodict.data.assistant.SecretStore
 import com.autodict.data.transcribe.TargetLanguage
 import com.autodict.data.transcribe.WhisperModel
 import kotlinx.coroutines.flow.Flow
@@ -116,9 +120,54 @@ class AppSettings(private val context: Context) {
         }
     }
 
+    /**
+     * Oppsettet for assistenten (M7). Nøkkelen ligg kryptert – sjå
+     * [com.autodict.data.assistant.SecretStore] – og blir aldri lagra i klartekst.
+     */
+    val assistantConfig: Flow<AssistantConfig> = context.dataStore.data.map { prefs ->
+        val preset = AssistantPreset.fromId(prefs[ASSISTANT_PRESET])
+        val secret = prefs[ASSISTANT_SECRET]?.let(SecretStore::decrypt)
+        AssistantConfig(
+            enabled = prefs[ASSISTANT_ENABLED] ?: false,
+            preset = preset,
+            baseUrl = prefs[ASSISTANT_BASE_URL] ?: preset.baseUrl,
+            model = prefs[ASSISTANT_MODEL] ?: preset.defaultModel,
+            credential = if (secret.isNullOrBlank()) {
+                AssistantCredential.None
+            } else {
+                AssistantCredential.ApiKey(secret)
+            },
+        )
+    }
+
+    suspend fun setAssistantConfig(config: AssistantConfig) {
+        context.dataStore.edit { prefs ->
+            prefs[ASSISTANT_ENABLED] = config.enabled
+            prefs[ASSISTANT_PRESET] = config.preset.name
+            prefs[ASSISTANT_BASE_URL] = config.baseUrl
+            prefs[ASSISTANT_MODEL] = config.model
+
+            when (val credential = config.credential) {
+                is AssistantCredential.ApiKey -> {
+                    val encrypted = SecretStore.encrypt(credential.key)
+                    // Kan vi ikkje kryptere, lagrar vi ingenting. Ein nøkkel i klartekst
+                    // er verre enn ein nøkkel som må skrivast inn på nytt.
+                    if (encrypted != null) prefs[ASSISTANT_SECRET] = encrypted
+                    else prefs.remove(ASSISTANT_SECRET)
+                }
+                else -> prefs.remove(ASSISTANT_SECRET)
+            }
+        }
+    }
+
     private companion object {
         val TREE_URI = stringPreferencesKey("tree_uri")
         val PENDING_DRAFT = stringPreferencesKey("pending_draft")
+        val ASSISTANT_ENABLED = booleanPreferencesKey("assistant_enabled")
+        val ASSISTANT_PRESET = stringPreferencesKey("assistant_preset")
+        val ASSISTANT_BASE_URL = stringPreferencesKey("assistant_base_url")
+        val ASSISTANT_MODEL = stringPreferencesKey("assistant_model")
+        val ASSISTANT_SECRET = stringPreferencesKey("assistant_secret")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_completed")
         val KEEP_WAV = booleanPreferencesKey("keep_original_wav")
