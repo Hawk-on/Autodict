@@ -118,13 +118,22 @@ class EntryEditViewModel(
             _ui.update { state ->
                 result.fold(
                     onSuccess = { polished ->
+                        // Ein rein transkripsjon treng ikkje reinskriving, og då skal modellen
+                        // la han stå. Men då er «Reinskriven, trykk Angre» ei misvisande
+                        // melding, og «Angre» ein knapp som ikkje gjer noko synleg – så vi
+                        // seier kva som faktisk skjedde.
+                        val unchanged = polished.body.trim() == before.trim()
                         state.copy(
                             polishing = false,
-                            rawTranscript = before,
+                            rawTranscript = if (unchanged) null else before,
                             body = polished.body,
                             // Ein tittel brukaren alt har skrive er meir verdt enn eit forslag.
                             title = state.title.ifBlank { polished.title },
-                            message = "Reinskriven. Trykk «Angre» for å få tilbake originalen.",
+                            message = if (unchanged) {
+                                "Teksten stod seg – ingen endring var nødvendig."
+                            } else {
+                                "Reinskriven. Trykk «Angre» for å få tilbake originalen."
+                            },
                         )
                     },
                     onFailure = { error ->
